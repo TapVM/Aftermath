@@ -4,3 +4,8 @@
 # Target folders.
 /target
 /scripts/byte_mods/target
+
+# Flamegraph
+flamegraph.svg
+perf.data
+perf.data.old

@@ -1,4 +1,5 @@
 use crate::class_parser::{self, ParsingError};
+use std::io::Cursor;
 
 #[test]
 pub fn invalid_magic() {

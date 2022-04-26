@@ -7,7 +7,7 @@ type U4 = u32;
 type Result<T, E = ParsingError> = core::result::Result<T, E>;
 
 #[derive(Debug)]
-pub enum CpNode {
+pub enum CpNode<'class> {
     Class(U2),
     String(U2),
     MethodType(U2),
@@ -24,43 +24,43 @@ pub enum CpNode {
     Long(U4, U4),
     Double(U4, U4),
     MethodHandle(U1, U2),
-    Utf8(Vec<u8>),
+    Utf8(&'class [u8]),
 }
 
 #[derive(Debug)]
-pub struct AttributeInfo {
+pub struct AttributeInfo<'class> {
     pub attribute_name_index: U2,
-    pub info: Vec<U1>,
+    pub info: &'class [U1],
 }
 
 #[derive(Debug)]
-pub struct FieldInfo {
+pub struct FieldInfo<'class> {
     pub access_flags: U2,
     pub name_index: U2,
     pub descriptor_index: U2,
-    pub attributes: Vec<AttributeInfo>,
+    pub attributes: Vec<AttributeInfo<'class>>,
 }
 
 #[derive(Debug)]
-pub struct MethodInfo {
+pub struct MethodInfo<'class> {
     pub access_flags: U2,
     pub name_index: U2,
     pub descriptor_index: U2,
-    pub attributes: Vec<AttributeInfo>,
+    pub attributes: Vec<AttributeInfo<'class>>,
 }
 
 #[derive(Debug)]
-pub struct ClassFile {
+pub struct ClassFile<'class> {
     pub minor_v: U2,
     pub major_v: U2,
-    pub cp: Vec<CpNode>,
+    pub cp: Vec<CpNode<'class>>,
     pub access_flags: U2,
     pub this_class: U2,
     pub super_class: U2,
     pub interfaces: Vec<U2>,
-    pub fields: Vec<FieldInfo>,
-    pub methods: Vec<MethodInfo>,
-    pub attributes: Vec<AttributeInfo>,
+    pub fields: Vec<FieldInfo<'class>>,
+    pub methods: Vec<MethodInfo<'class>>,
+    pub attributes: Vec<AttributeInfo<'class>>,
 }
 
 #[derive(Debug)]
@@ -92,8 +92,8 @@ impl Parser {
         output
     }
 
-    pub fn u1_range(&mut self, end: usize) -> Vec<U1> {
-        let output = self.bytes[self.index..self.index + end].to_vec();
+    pub fn u1_range(&mut self, end: usize) -> &[u8] {
+        let output = &self.bytes[self.index..self.index + end];
         self.index += end;
         output
     }
@@ -193,15 +193,14 @@ impl Parser {
 
             attributes.push(AttributeInfo {
                 attribute_name_index,
-                info: self.bytes[self.index..self.index + len as usize].to_vec(),
+                info: self.u1_range(len as usize),
             });
-            self.index += len as usize;
         }
 
         attributes
     }
 
-    pub fn parse(&mut self) -> Result<ClassFile> {
+    pub fn parse<'parse>(&'parse mut self) -> Result<ClassFile> {
         let magic = self.u4();
 
         if magic != 0xCAFEBABE {
