@@ -195,6 +195,7 @@ impl Parser {
                 attribute_name_index,
                 info: self.bytes[self.index..self.index + len as usize].to_vec(),
             });
+            self.index += len as usize;
         }
 
         attributes
