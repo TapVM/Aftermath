@@ -10,16 +10,16 @@ pub fn invalid_magic() {
     match parse {
         Ok(_) => {
             panic!(
-                "This *should've* returned an error. Specifically the invalid magic error.
-Something's broken."
+                "This *should've* returned an error. Specifically the invalid magic error. Somethin\
+g's broken."
             )
         }
         Err(e) => match e {
-            ParsingError::Magic => {}
+            ParsingError::ConstantPoolTag(..) => {}
             _ => {
                 panic!(
-                    "While this did return an error, it returned the wrong error. It should've
-returned the invalid magic error. Something's broken."
+                    "While this did return an error, it returned the wrong error. It should've retu\
+rned the invalid magic error. Something's broken."
                 )
             }
         },

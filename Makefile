@@ -3,9 +3,13 @@ default:
 
 classbasket:
 	@echo "\e[36mBuilding random Java snippets for JVM development...\e[0m\n"
-	cd class_basket; javac *.java;
+	@cd class_basket; javac *.java;
 	@chmod +x ./scripts/shell.sh
 	@cd scripts; ./shell.sh;
+
+test: classbasket
+	@echo "\n\e[36mRunning tests...\e[0m\n"
+	@cargo test --quiet
 
 help:
 	@echo "Welcome to the Aftermath build system 👋"
@@ -16,7 +20,7 @@ help:
 	@echo "\`classbasket\` -> Builds random Java snippets for JVM development."
 	@echo "\`test\` -> Tests the JVM."
 	@echo "\`advancedtest\` -> Advanced testing for the JVM. (Requires an internet connection)"
-	@echo "\`bench\` -> Benchmarks performance, optionally compared to Hotspot and GraalVM."
+	@echo "\`bench\` -> Benchmarks performance, optionally compared to Hotspot, GraalVM and Falcon."
 	@echo "\`clean\` -> Cleans the workspace.\n"
 
 	@echo "That's it for now, we hope you enjoy your stay =)"
