@@ -1,0 +1,6 @@
+/Cargo.lock
+*.class
+
+# Target folders.
+/target
+/scripts/byte_mods/target
