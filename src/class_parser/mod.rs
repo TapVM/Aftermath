@@ -46,7 +46,7 @@ pub struct MethodInfo {
     pub access_flags: U2,
     pub name_index: U2,
     pub descriptor_index: U2,
-    pub attibutes: Vec<AttributeInfo>,
+    pub attributes: Vec<AttributeInfo>,
 }
 
 #[derive(Debug)]
@@ -105,7 +105,7 @@ impl Parser {
         for _ in 0..length - 1 {
             let tag = self.u1();
 
-            dbg!(match tag {
+            match tag {
                 7 => {
                     cp.push(CpNode::Class(self.u2()));
                 }
@@ -178,10 +178,26 @@ impl Parser {
                 _ => {
                     return Err(ParsingError::ConstantPoolTag(tag));
                 }
-            })
+            }
         }
 
         Ok(cp)
+    }
+
+    pub fn parse_attributes(&mut self, length: U2) -> Vec<AttributeInfo> {
+        let mut attributes = Vec::with_capacity(length as usize);
+
+        for _ in 0..length {
+            let attribute_name_index = self.u2();
+            let len = self.u4();
+
+            attributes.push(AttributeInfo {
+                attribute_name_index,
+                info: self.bytes[self.index..self.index + len as usize].to_vec(),
+            });
+        }
+
+        attributes
     }
 
     pub fn parse(&mut self) -> Result<ClassFile> {
@@ -202,19 +218,63 @@ impl Parser {
             return Err(ParsingError::MinorVersion);
         }
 
-        let cp = dbg!(self.parse_child_pool()?);
+        let cp = self.parse_child_pool()?;
+
+        let access_flags = self.u2();
+        let this_class = self.u2();
+        let super_class = self.u2();
+        let interfaces_length = self.u2();
+
+        let mut interfaces = Vec::with_capacity(interfaces_length as usize);
+        for _ in 0..interfaces_length {
+            interfaces.push(self.u2());
+        }
+
+        let fields_length = self.u2();
+        let mut fields = Vec::with_capacity(fields_length as usize);
+        for _ in 0..fields_length {
+            let access_flags = self.u2();
+            let name_index = self.u2();
+            let descriptor_index = self.u2();
+            let attributes_count = self.u2();
+
+            fields.push(FieldInfo {
+                access_flags,
+                name_index,
+                descriptor_index,
+                attributes: self.parse_attributes(attributes_count),
+            })
+        }
+
+        let methods_length = self.u2();
+        let mut methods = Vec::with_capacity(methods_length as usize);
+        for _ in 0..methods_length {
+            let access_flags = self.u2();
+            let name_index = self.u2();
+            let descriptor_index = self.u2();
+            let attributes_count = self.u2();
+
+            methods.push(MethodInfo {
+                access_flags,
+                name_index,
+                descriptor_index,
+                attributes: self.parse_attributes(attributes_count),
+            })
+        }
+
+        let attributes_length = self.u2();
 
         Ok(ClassFile {
             minor_v,
             major_v,
-            cp: vec![],
-            access_flags: 0,
-            this_class: 0,
-            super_class: 0,
-            interfaces: vec![],
-            fields: vec![],
-            methods: vec![],
-            attributes: vec![],
+            cp,
+            access_flags,
+            this_class,
+            super_class,
+            interfaces,
+            fields,
+            methods,
+            attributes: self.parse_attributes(attributes_length),
         })
     }
 }
