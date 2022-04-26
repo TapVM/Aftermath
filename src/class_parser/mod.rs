@@ -92,6 +92,98 @@ impl Parser {
         output
     }
 
+    pub fn u1_range(&mut self, end: usize) -> Vec<U1> {
+        let output = self.bytes[self.index..self.index + end].to_vec();
+        self.index += end;
+        output
+    }
+
+    pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode>> {
+        let length = self.u2();
+        let mut cp: Vec<CpNode> = Vec::with_capacity((length - 1).into());
+
+        for _ in 0..length - 1 {
+            let tag = self.u1();
+
+            dbg!(match tag {
+                7 => {
+                    cp.push(CpNode::Class(self.u2()));
+                }
+
+                9 => {
+                    cp.push(CpNode::FieldRef(self.u2(), self.u2()));
+                }
+
+                10 => {
+                    cp.push(CpNode::MethodRef(self.u2(), self.u2()));
+                }
+
+                11 => {
+                    cp.push(CpNode::InterfaceMethodRef(self.u2(), self.u2()));
+                }
+
+                8 => {
+                    cp.push(CpNode::String(self.u2()));
+                }
+
+                3 => {
+                    cp.push(CpNode::Integer(self.u4()));
+                }
+
+                4 => {
+                    cp.push(CpNode::Float(self.u4()));
+                }
+
+                5 => {
+                    cp.push(CpNode::Long(self.u4(), self.u4()));
+                }
+
+                6 => {
+                    cp.push(CpNode::Double(self.u4(), self.u4()));
+                }
+
+                12 => {
+                    cp.push(CpNode::NameAndType(self.u2(), self.u2()));
+                }
+
+                1 => {
+                    let length = self.u2().into();
+                    cp.push(CpNode::Utf8(self.u1_range(length)));
+                }
+
+                15 => {
+                    cp.push(CpNode::MethodHandle(self.u1(), self.u2()));
+                }
+
+                16 => {
+                    cp.push(CpNode::MethodType(self.u2()));
+                }
+
+                17 => {
+                    cp.push(CpNode::Dynamic(self.u2(), self.u2()));
+                }
+
+                18 => {
+                    cp.push(CpNode::InvokeDynamic(self.u2(), self.u2()));
+                }
+
+                19 => {
+                    cp.push(CpNode::Module(self.u2()));
+                }
+
+                20 => {
+                    cp.push(CpNode::Package(self.u2()));
+                }
+
+                _ => {
+                    return Err(ParsingError::ConstantPoolTag(tag));
+                }
+            })
+        }
+
+        Ok(cp)
+    }
+
     pub fn parse(&mut self) -> Result<ClassFile> {
         let magic = self.u4();
 
@@ -99,9 +191,22 @@ impl Parser {
             return Err(ParsingError::Magic);
         }
 
+        let minor_v = self.u2();
+        let major_v = self.u2();
+
+        if !(45..=61).contains(&major_v) {
+            return Err(ParsingError::MajorVersion);
+        }
+
+        if 56 <= major_v && !(minor_v == 0 || minor_v == 65535) {
+            return Err(ParsingError::MinorVersion);
+        }
+
+        let cp = dbg!(self.parse_child_pool()?);
+
         Ok(ClassFile {
-            minor_v: 0,
-            major_v: 0,
+            minor_v,
+            major_v,
             cp: vec![],
             access_flags: 0,
             this_class: 0,

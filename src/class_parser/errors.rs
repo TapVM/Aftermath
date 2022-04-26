@@ -1,10 +1,8 @@
-use std::{borrow::Cow, fmt::Debug};
-
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ParsingError {
-    #[error("Error (Metadata) -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨")]
+    #[error("Error (Metadata) -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨\nHelp ~> Are you sure that this is a JVM class file?")]
     Magic,
     #[error("Error (Metadata) -> If the major version is 56 or above, the minor version can only be 0 or 65535.")]
     MinorVersion,
@@ -45,11 +43,11 @@ pub enum ParsingError {
     #[error("Error (Access flags) -> The ACCESS_ANNOTATION flag was set while the ACCESS_INTERFACE was NOT set, which is illegal.")]
     AnnotationWithoutInterface,
 
-    #[error("Error (Class file) -> The field {0} provided an invalid index -- {1} when the length of the array was {2}.")]
-    InvalidIndexProvidedByField(Cow<'static, str>, u16, u16),
+    #[error("Error (Class file) -> The field {0} provided an illegal index -- {1} when the length of the array was {2}.")]
+    InvalidIndexProvidedByField(String, u16, u16),
 
-    #[error("Error (Class file) -> The field {0} provided an invalid index -- {1}, since it expected the {2} type rather it got the {3} type.")]
-    InvalidIndexType(Cow<'static, str>, u16, Cow<'static, str>, String),
+    #[error("Error (Class file) -> The field {0} provided an illegal index -- {1}, since it expected the {2} type rather it got the {3} type.")]
+    InvalidIndexType(String, u16, String, String),
 
     #[error("I/O Error -> ")]
     IoError(#[from] std::io::Error),

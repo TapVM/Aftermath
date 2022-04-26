@@ -15,7 +15,7 @@ g's broken."
             )
         }
         Err(e) => match e {
-            ParsingError::ConstantPoolTag(..) => {}
+            ParsingError::Magic => {}
             _ => {
                 panic!(
                     "While this did return an error, it returned the wrong error. It should've retu\
