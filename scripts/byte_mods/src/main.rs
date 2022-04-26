@@ -1,7 +1,6 @@
 use std::fs;
 
 fn main() -> Result<(), std::io::Error> {
-    // Intentional invalid magic in class file
     let mut intentional_invalid_magic =
         *include_bytes!("../../../class_basket/intentional_invalid_magic.class");
 
@@ -14,6 +13,8 @@ fn main() -> Result<(), std::io::Error> {
         "../../class_basket/intentional_invalid_magic.class",
         intentional_invalid_magic,
     )?;
+
+    println!("[Log] -> Made class file containing invalid magic number.");
 
     Ok(())
 }

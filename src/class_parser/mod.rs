@@ -74,6 +74,18 @@ impl Parser {
         Self { bytes, index: 0 }
     }
 
+    pub fn u1(&mut self) -> U1 {
+        let output = self.bytes[self.index];
+        self.index += 1;
+        output
+    }
+
+    pub fn u2(&mut self) -> U2 {
+        let output = U2::from_be_bytes(self.bytes[self.index..self.index + 2].try_into().unwrap());
+        self.index += 2;
+        output
+    }
+
     pub fn u4(&mut self) -> U4 {
         let output = U4::from_be_bytes(self.bytes[self.index..self.index + 4].try_into().unwrap());
         self.index += 4;
