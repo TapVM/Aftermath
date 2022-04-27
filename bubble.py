@@ -47,6 +47,7 @@ def classbasket():
     print(f"\n{GREEN}Building random small Java snippets for JVM testing...{RESET}\n")
     if os.system("java ./class_basket/*.java") != 0:
         print(f"\n{RED}Build FAILED. :<{RESET}\n")
+        exit()
     else:
         print(f"\n{GREEN}Build successful!{RESET}\n")
 
