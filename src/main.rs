@@ -1,3 +1,8 @@
+use aftermath::class_parser::Parser;
+use std::thread;
+use std::time::{Duration, Instant};
+mod class_parser;
+
 pub fn black_box<T>(dummy: T) -> T {
     unsafe {
         let ret = std::ptr::read_volatile(&dummy);
@@ -5,14 +10,13 @@ pub fn black_box<T>(dummy: T) -> T {
         ret
     }
 }
-mod class_parser;
-use class_parser::Parser;
-use std::time::Instant;
+
 fn main() {
-    let now = Instant::now();
-    let mut parser = black_box(Parser::new(black_box(
-        include_bytes!("../class_basket/large.class").to_vec(),
-    )));
-    black_box(parser.parse().unwrap());
-    dbg!(now.elapsed());
+    let file = std::fs::read("/home/gimbles/Desktop/aftermath/class_basket/large.class").unwrap();
+    let start = Instant::now();
+    let mut parser = black_box(Parser::new(black_box(&file)));
+    let parsed = black_box(parser.parse());
+    dbg!(start.elapsed());
+    thread::sleep(Duration::from_secs(15));
+    dbg!(parsed.unwrap());
 }
