@@ -1,9 +1,14 @@
 use aftermath::class_parser::Parser;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use std::io::Cursor;
 
 fn parser(c: &mut Criterion) {
-    c.bench_function("LARGE class", |b| b.iter(|| {}));
+    let x = std::fs::read("./class_basket/large.class").unwrap();
+    c.bench_function("LARGE class", |b| {
+        b.iter(|| {
+            let mut parser = black_box(Parser::new(black_box(&x)));
+            black_box(parser.parse().unwrap());
+        })
+    });
 }
 
 criterion_group!(group, parser);

@@ -64,13 +64,13 @@ pub struct ClassFile<'class> {
 }
 
 #[derive(Debug)]
-pub struct Parser {
-    pub bytes: Vec<u8>,
+pub struct Parser<'input> {
+    pub bytes: &'input [u8],
     pub index: usize,
 }
 
-impl Parser {
-    pub fn new(bytes: Vec<u8>) -> Self {
+impl<'input> Parser<'input> {
+    pub fn new(bytes: &'input [u8]) -> Self {
         Self { bytes, index: 0 }
     }
 
@@ -92,15 +92,15 @@ impl Parser {
         output
     }
 
-    pub fn u1_range(&mut self, end: usize) -> &[u8] {
+    pub fn u1_range(&mut self, end: usize) -> &'input [u8] {
         let output = &self.bytes[self.index..self.index + end];
         self.index += end;
         output
     }
 
-    pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode>> {
+    pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode<'input>>> {
         let length = self.u2();
-        let mut cp: Vec<CpNode> = Vec::with_capacity((length - 1).into());
+        let mut cp: Vec<CpNode<'input>> = Vec::with_capacity((length - 1).into());
 
         for _ in 0..length - 1 {
             let tag = self.u1();
@@ -184,7 +184,7 @@ impl Parser {
         Ok(cp)
     }
 
-    pub fn parse_attributes(&mut self, length: U2) -> Vec<AttributeInfo> {
+    pub fn parse_attributes(&mut self, length: U2) -> Vec<AttributeInfo<'input>> {
         let mut attributes = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -200,7 +200,7 @@ impl Parser {
         attributes
     }
 
-    pub fn parse<'parse>(&'parse mut self) -> Result<ClassFile> {
+    pub fn parse(&mut self) -> Result<ClassFile<'input>> {
         let magic = self.u4();
 
         if magic != 0xCAFEBABE {
