@@ -10,7 +10,7 @@ fn main() -> Result<(), std::io::Error> {
     intentional_invalid_magic[3] = 0;
 
     fs::write(
-        "../../class_basket/intentional_invalid_magic.class",
+        "../../../class_basket/intentional_invalid_magic.class",
         intentional_invalid_magic,
     )?;
 
