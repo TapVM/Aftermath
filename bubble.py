@@ -51,7 +51,7 @@ def classbasket():
     else:
         print(f"\n{GREEN}Build successful!{RESET}\n")
 
-    os.chdir("scripts/byte_mods");
+    os.chdir("scripts/byte_mods/src/");
     if os.system("cargo run") != 0:
         print(f"\n{RED}Byte mods build FAILED. :<{RESET}\n")
     else:
