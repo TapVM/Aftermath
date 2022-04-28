@@ -4,7 +4,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ParsingError {
-    #[error("Error (Metadata) -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨\nHelp ~> Are you sure that this is a JVM class file?")]
+    #[error("Error (Metadata) -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨\nHelp ~> Are you *sure* that this is a JVM class file?")]
     Magic,
     #[error("Error (Metadata) -> If the major version is 56 or above, the minor version can only be 0 or 65535.")]
     MinorVersion,
@@ -13,8 +13,20 @@ pub enum ParsingError {
     #[error("Error (Constant Pool) -> Invalid constant pool tag -- {0}.")]
     ConstantPoolTag(u8),
 
+    #[error("Error (Access flags) -> If the ACCESS_MODULE flag is set, no other flag is allowed to be set.")]
+    ContainsOtherFlagsWhileBeingAModule,
+
     #[error("Error (Access flags and Metadata) -> If the class file is a module, the major_version and minor_version should be ≥ 53.0 (i.e. Java SE 9 and above)")]
     InvalidVersionForModule,
+
+    #[error("Error (Access flags) -> This class file is a module, but one of (or more) of the following variables
+    • Super class
+    • Interfaces count
+    • Fields count
+    • Methods count
+
+    were not zero, which is illegal.")]
+    ModuleHasIllegalVariables,
 
     #[error("Error (Access flags) -> The ACCESS_INTERFACE flag was set without the ACCESS_ABSTRACT flag, which is illegal.")]
     InterfaceWithoutAbstract,
