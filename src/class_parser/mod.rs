@@ -94,7 +94,7 @@ impl<'input> Parser<'input> {
 
     pub fn u4(&mut self) -> U4 {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
-    } 
+    }
 
     pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode<'input>>> {
         let length = self.u2();
@@ -188,10 +188,11 @@ impl<'input> Parser<'input> {
         for _ in 0..length {
             let attribute_name_index = self.u2();
             let len = self.u4();
+            let info = self.u1_range(len as usize);
 
             attributes.push(AttributeInfo {
                 attribute_name_index,
-                info: self.u1_range(len as usize),
+                info,
             });
         }
 
@@ -235,12 +236,13 @@ impl<'input> Parser<'input> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
+            let attributes = self.parse_attributes(attributes_count);
 
             fields.push(FieldInfo {
                 access_flags,
                 name_index,
                 descriptor_index,
-                attributes: self.parse_attributes(attributes_count),
+                attributes,
             })
         }
 
@@ -251,16 +253,18 @@ impl<'input> Parser<'input> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
+            let attributes = self.parse_attributes(attributes_count);
 
             methods.push(MethodInfo {
                 access_flags,
                 name_index,
                 descriptor_index,
-                attributes: self.parse_attributes(attributes_count),
+                attributes,
             })
         }
 
         let attributes_length = self.u2();
+        let attributes = self.parse_attributes(attributes_length);
 
         Ok(ClassFile {
             minor_v,
@@ -272,7 +276,7 @@ impl<'input> Parser<'input> {
             interfaces,
             fields,
             methods,
-            attributes: self.parse_attributes(attributes_length),
+            attributes,
         })
     }
 }
