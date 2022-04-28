@@ -96,6 +96,10 @@ impl<'input> Parser<'input> {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
+    pub fn has_flag(&mut self, integer: U2, flag: U2) -> bool {
+        integer & flag != 0
+    }
+
     pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode<'input>>> {
         let length = self.u2();
         let mut cp: Vec<CpNode<'input>> = Vec::with_capacity((length - 1).into());
@@ -248,6 +252,7 @@ impl<'input> Parser<'input> {
 
         let methods_length = self.u2();
         let mut methods = Vec::with_capacity(methods_length as usize);
+
         for _ in 0..methods_length {
             let access_flags = self.u2();
             let name_index = self.u2();
