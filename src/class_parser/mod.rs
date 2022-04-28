@@ -82,7 +82,7 @@ impl<'input> Parser<'input> {
         output
     }
 
-    pub fn u1_range(&mut self, end: usize) -> &'input [u8] {
+    pub fn u1_range(&mut self, end: usize) -> &'input [U1] {
         let output = &self.bytes[self.index..self.index + end];
         self.index += end;
         output
@@ -222,8 +222,47 @@ impl<'input> Parser<'input> {
         }
 
         let cp = self.parse_child_pool()?;
-
         let access_flags = self.u2();
+        let mut is_module = false;
+
+        if self.has_flag(access_flags, 0x8000) {
+            if access_flags != 0x8000 {
+                return Err(ParsingError::ContainsOtherFlagsWhileBeingAModule);
+            }
+
+            if !major_v >= 53 {
+                return Err(ParsingError::InvalidVersionForModule);
+            }
+
+            is_module = true;
+        }
+
+        if self.has_flag(access_flags, 0x0200) {
+            if !self.has_flag(access_flags, 0x0400) {
+                return Err(ParsingError::InterfaceWithoutAbstract);
+            }
+
+            if self.has_flag(access_flags, 0x0010)
+                || self.has_flag(access_flags, 0x0020)
+                || self.has_flag(access_flags, 0x4000)
+                || self.has_flag(access_flags, 0x8000)
+            {
+                return Err(ParsingError::ContainsIllegalFlagsAsInterface);
+            }
+        } else {
+            if self.has_flag(access_flags, 0x2000) || self.has_flag(access_flags, 0x8000) {
+                return Err(ParsingError::ContainsIllegalFlagsAsNonInterface);
+            }
+
+            if self.has_flag(access_flags, 0x0010) && self.has_flag(access_flags, 0x0400) {
+                return Err(ParsingError::ContainsFinalAndAbstractAsNonInterface);
+            }
+        }
+
+        if self.has_flag(access_flags, 0x2000) && !self.has_flag(access_flags, 0x0200) {
+            return Err(ParsingError::AnnotationWithoutInterface);
+        }
+
         let this_class = self.u2();
         let super_class = self.u2();
         let interfaces_length = self.u2();
@@ -266,6 +305,25 @@ impl<'input> Parser<'input> {
                 descriptor_index,
                 attributes,
             })
+        }
+
+        if is_module {
+            if super_class != 0
+                || interfaces_length != 0
+                || fields_length != 0
+                || methods_length != 0
+            {
+                return Err(ParsingError::ModuleHasIllegalVariables);
+            }
+
+            // TODO [URGENT] ->
+            /*
+                Attributes: One Module attribute must be present. Except
+                for Module, ModulePackages, ModuleMainClass, InnerClasses,
+                SourceFile, SourceDebugExtension, RuntimeVisibleAnnotations, and
+                RuntimeInvisibleAnnotations, none of the pre-defined attributes (§4.7) may
+                appear.
+            */
         }
 
         let attributes_length = self.u2();
