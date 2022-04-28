@@ -20,3 +20,6 @@ fn main() {
     thread::sleep(Duration::from_secs(15));
     dbg!(parsed.unwrap());
 }
+
+#[cfg(tests)]
+mod tests;

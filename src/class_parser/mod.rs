@@ -82,23 +82,19 @@ impl<'input> Parser<'input> {
         output
     }
 
-    pub fn u2(&mut self) -> U2 {
-        let output = U2::from_be_bytes(self.bytes[self.index..self.index + 2].try_into().unwrap());
-        self.index += 2;
-        output
-    }
-
-    pub fn u4(&mut self) -> U4 {
-        let output = U4::from_be_bytes(self.bytes[self.index..self.index + 4].try_into().unwrap());
-        self.index += 4;
-        output
-    }
-
     pub fn u1_range(&mut self, end: usize) -> &'input [u8] {
         let output = &self.bytes[self.index..self.index + end];
         self.index += end;
         output
     }
+
+    pub fn u2(&mut self) -> U2 {
+        U2::from_be_bytes(self.u1_range(2).try_into().unwrap())
+    }
+
+    pub fn u4(&mut self) -> U4 {
+        U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
+    } 
 
     pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode<'input>>> {
         let length = self.u2();
