@@ -26,7 +26,135 @@ pub enum CpNode<'class> {
     Long(U4, U4),
     Double(U4, U4),
     MethodHandle(U1, U2),
-    Utf8(&'class [u8]),
+    Utf8(&'class [U1]),
+}
+
+#[derive(Debug)]
+pub enum Attributes<'class> {
+    Value(Value),
+    Code(AttrCode<'class>),
+    StackMapTable(StackMapTable<'class>),
+    Exceptions(Exceptions),
+    InnerClass(InnerClass),
+    EnclosingMethod(EnclosingMethod),
+    Synthetic(Synthetic),
+    Signature(Signature),
+    SourceFile(SourceFile),
+    SourceDebugExt(SourceDebugExt<'class>),
+    LineNumberTable(LineNumberTable),
+    LocalVariableTable(LocalVariableTable),
+    LocalVariableTypeTable(LocalVariableTypeTable),
+    Deprecated(Deprecated),
+    RuntimeVisibleAnnotations(RuntimeVisibleAnnotations),
+    RuntimeInvisibleAnnotations(RuntimeInvisibleAnnotations),
+    RuntimeVisibleParameterAnnotations(RuntimeVisibleParameterAnnotations),
+    RuntimeInvisibleParameterAnnotations(RuntimeInvisibleParameterAnnotations),
+    RuntimeVisibleTypeAnnotations(RuntimeVisibleTypeAnnotations),
+    RuntimeInvisibleTypeAnnotations(RuntimeInvisibleTypeAnnotations),
+    AnnotationDefault(AnnotationDefault),
+    BootstrapMethods(BootstrapMethods),
+    MethodParameters(MethodParameters),
+    Module(Module),
+    ModulePackages(ModulePackages),
+    ModuleMainClass(ModuleMainClass),
+    NestHost(NestHost),
+    NestMembers(NestMembers),
+    Record(Record),
+    PermittedSubclasses(PermittedSubclasses),
+}
+
+#[derive(Debug)]
+pub struct LineNumberTableAttrInner {
+    start_pc: U2,
+    line_number: U2,
+}
+
+#[derive(Debug)]
+pub struct LocalVariableTableAttrInner {
+    start_pc: U2,
+    length: U2,
+    name_index: U2,
+    descriptor_index: U2,
+    index: U2,
+}
+
+#[derive(Debug)]
+pub struct LocalVariableTable {
+    local_variable_table: Vec<LocalVariableTableAttrInner>,
+}
+
+#[derive(Debug)]
+pub struct LineNumberTable {
+    line_number_table: Vec<LineNumberTableAttrInner>,
+}
+
+#[derive(Debug)]
+pub struct SourceDebugExt<'class> {
+    debug_extension: &'class [U1],
+}
+
+#[derive(Debug)]
+pub struct ExceptionTableAttrCode {
+    start_pc: U2,
+    end_pc: U2,
+    handler_pc: U2,
+    catch_type: U2,
+}
+
+#[derive(Debug)]
+pub struct AttrCode<'class> {
+    max_stack: U2,
+    max_locals: U2,
+    code: &'class [U1],
+    exception_table: Vec<ExceptionTableAttrCode>,
+    attributes: Vec<Attributes<'class>>,
+}
+
+#[derive(Debug)]
+pub struct Synthetic;
+
+#[derive(Debug)]
+pub struct Signature {
+    signature_index: U2,
+}
+
+#[derive(Debug)]
+pub struct SourceFile {
+    sourcefile_index: U2,
+}
+
+#[derive(Debug)]
+pub struct EnclosingMethod {
+    class_index: U2,
+    method_index: U2,
+}
+
+#[derive(Debug)]
+pub struct ClassesInnerClassAttr {
+    inner_class_info_index: U2,
+    outer_class_info_index: U2,
+    inner_name_index: U2,
+    inner_class_access_flags: U2,
+}
+
+#[derive(Debug)]
+pub struct InnerClass {
+    classes: Vec<ClassesInnerClassAttr>,
+}
+
+#[derive(Debug)]
+pub struct StackMapTable<'class> {
+    entries: &'class [U1],
+}
+
+#[derive(Debug)]
+pub struct Value {
+    value_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Exceptions {
+    exception_index_table: Vec<U2>,
 }
 
 #[derive(Debug)]
@@ -66,13 +194,13 @@ pub struct ClassFile<'class> {
 }
 
 #[derive(Debug)]
-pub struct Parser<'input> {
-    pub bytes: &'input [u8],
+pub struct Parser<'class> {
+    pub bytes: &'class [U1],
     pub index: usize,
 }
 
-impl<'input> Parser<'input> {
-    pub fn new(bytes: &'input [u8]) -> Self {
+impl<'class> Parser<'class> {
+    pub fn new(bytes: &'class [U1]) -> Self {
         Self { bytes, index: 0 }
     }
 
@@ -82,7 +210,7 @@ impl<'input> Parser<'input> {
         output
     }
 
-    pub fn u1_range(&mut self, end: usize) -> &'input [U1] {
+    pub fn u1_range(&mut self, end: usize) -> &'class [U1] {
         let output = &self.bytes[self.index..self.index + end];
         self.index += end;
         output
@@ -100,9 +228,9 @@ impl<'input> Parser<'input> {
         integer & flag != 0
     }
 
-    pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode<'input>>> {
+    pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode<'class>>> {
         let length = self.u2();
-        let mut cp: Vec<CpNode<'input>> = Vec::with_capacity((length - 1).into());
+        let mut cp: Vec<CpNode<'class>> = Vec::with_capacity((length - 1).into());
 
         for _ in 0..length - 1 {
             let tag = self.u1();
@@ -186,11 +314,16 @@ impl<'input> Parser<'input> {
         Ok(cp)
     }
 
-    pub fn parse_attributes(&mut self, length: U2) -> Vec<AttributeInfo<'input>> {
+    pub fn parse_attributes(
+        &mut self,
+        length: U2,
+        is_module: bool,
+    ) -> Result<Vec<AttributeInfo<'class>>> {
         let mut attributes = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
             let attribute_name_index = self.u2();
+            if is_module {}
             let len = self.u4();
             let info = self.u1_range(len as usize);
 
@@ -200,10 +333,10 @@ impl<'input> Parser<'input> {
             });
         }
 
-        attributes
+        Ok(attributes)
     }
 
-    pub fn parse(&mut self) -> Result<ClassFile<'input>> {
+    pub fn parse(&mut self) -> Result<ClassFile<'class>> {
         let magic = self.u4();
 
         if magic != 0xCAFEBABE {
@@ -230,37 +363,37 @@ impl<'input> Parser<'input> {
                 return Err(ParsingError::ContainsOtherFlagsWhileBeingAModule);
             }
 
-            if !major_v >= 53 {
+            if !(major_v >= 53) {
                 return Err(ParsingError::InvalidVersionForModule);
             }
 
             is_module = true;
-        }
-
-        if self.has_flag(access_flags, 0x0200) {
-            if !self.has_flag(access_flags, 0x0400) {
-                return Err(ParsingError::InterfaceWithoutAbstract);
-            }
-
-            if self.has_flag(access_flags, 0x0010)
-                || self.has_flag(access_flags, 0x0020)
-                || self.has_flag(access_flags, 0x4000)
-                || self.has_flag(access_flags, 0x8000)
-            {
-                return Err(ParsingError::ContainsIllegalFlagsAsInterface);
-            }
         } else {
-            if self.has_flag(access_flags, 0x2000) || self.has_flag(access_flags, 0x8000) {
-                return Err(ParsingError::ContainsIllegalFlagsAsNonInterface);
+            if self.has_flag(access_flags, 0x0200) {
+                if !self.has_flag(access_flags, 0x0400) {
+                    return Err(ParsingError::InterfaceWithoutAbstract);
+                }
+
+                if self.has_flag(access_flags, 0x0010)
+                    || self.has_flag(access_flags, 0x0020)
+                    || self.has_flag(access_flags, 0x4000)
+                    || self.has_flag(access_flags, 0x8000)
+                {
+                    return Err(ParsingError::ContainsIllegalFlagsAsInterface);
+                }
+            } else {
+                if self.has_flag(access_flags, 0x2000) || self.has_flag(access_flags, 0x8000) {
+                    return Err(ParsingError::ContainsIllegalFlagsAsNonInterface);
+                }
+
+                if self.has_flag(access_flags, 0x0010) && self.has_flag(access_flags, 0x0400) {
+                    return Err(ParsingError::ContainsFinalAndAbstractAsNonInterface);
+                }
             }
 
-            if self.has_flag(access_flags, 0x0010) && self.has_flag(access_flags, 0x0400) {
-                return Err(ParsingError::ContainsFinalAndAbstractAsNonInterface);
+            if self.has_flag(access_flags, 0x2000) && !self.has_flag(access_flags, 0x0200) {
+                return Err(ParsingError::AnnotationWithoutInterface);
             }
-        }
-
-        if self.has_flag(access_flags, 0x2000) && !self.has_flag(access_flags, 0x0200) {
-            return Err(ParsingError::AnnotationWithoutInterface);
         }
 
         let this_class = self.u2();
@@ -279,7 +412,7 @@ impl<'input> Parser<'input> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.parse_attributes(attributes_count);
+            let attributes = self.parse_attributes(attributes_count, false)?;
 
             fields.push(FieldInfo {
                 access_flags,
@@ -297,7 +430,7 @@ impl<'input> Parser<'input> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.parse_attributes(attributes_count);
+            let attributes = self.parse_attributes(attributes_count, false)?;
 
             methods.push(MethodInfo {
                 access_flags,
@@ -306,6 +439,9 @@ impl<'input> Parser<'input> {
                 attributes,
             })
         }
+
+        let attributes_length = self.u2();
+        let attributes: Vec<AttributeInfo>;
 
         if is_module {
             if super_class != 0
@@ -316,18 +452,10 @@ impl<'input> Parser<'input> {
                 return Err(ParsingError::ModuleHasIllegalVariables);
             }
 
-            // TODO [URGENT] ->
-            /*
-                Attributes: One Module attribute must be present. Except
-                for Module, ModulePackages, ModuleMainClass, InnerClasses,
-                SourceFile, SourceDebugExtension, RuntimeVisibleAnnotations, and
-                RuntimeInvisibleAnnotations, none of the pre-defined attributes (§4.7) may
-                appear.
-            */
+            attributes = self.parse_attributes(attributes_length, true)?;
+        } else {
+            attributes = self.parse_attributes(attributes_length, false)?;
         }
-
-        let attributes_length = self.u2();
-        let attributes = self.parse_attributes(attributes_length);
 
         Ok(ClassFile {
             minor_v,
