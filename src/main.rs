@@ -12,13 +12,14 @@ pub fn black_box<T>(dummy: T) -> T {
 }
 
 fn main() {
-    let file = std::fs::read("/home/gimbles/Desktop/Aftermath/class_basket/large.class").unwrap();
+    let file =
+        std::fs::read("/home/gimbles/Desktop/Aftermath/class_basket/module-info.class").unwrap();
     let start = Instant::now();
     let mut parser = black_box(Parser::new(black_box(&file)));
-    let parsed = black_box(parser.parse());
+    let parsed = black_box(parser.parse().unwrap());
     dbg!(start.elapsed());
     thread::sleep(Duration::from_secs(15));
-    dbg!(parsed.unwrap());
+    dbg!(parsed);
 }
 
 #[cfg(tests)]
