@@ -52,7 +52,7 @@ pub enum Attributes<'class> {
     RuntimeVisibleTypeAnnotations(RuntimeVisibleTypeAnnotations),
     RuntimeInvisibleTypeAnnotations(RuntimeInvisibleTypeAnnotations),
     AnnotationDefault(AnnotationDefault),
-    BootstrapMethods(BootstrapMethods),
+    BootstrapMethods(BootStrapMethods),
     MethodParameters(MethodParameters),
     Module(Module),
     ModulePackages(ModulePackages),
@@ -64,10 +64,199 @@ pub enum Attributes<'class> {
 }
 
 #[derive(Debug)]
+pub enum TargetInfo {
+    TypeParameterTarget,
+    SupertypeTarget,
+    TypeParameterBoundTarget,
+    EmptyTarget,
+    FormalParameterTarget,
+    ThrowsTarget,
+    LocalvarTarget,
+    CatchTarget,
+    OffsetTarget,
+    TypeArgumentTarget,
+}
+
+#[derive(Debug)]
+pub struct ModuleRequires {
+    requires_index: U2,
+    requires_flags: U2,
+    require_version_index: U2,
+}
+
+#[derive(Debug)]
+pub struct ModuleExports {
+    exports_index: U2,
+    exports_flags: U2,
+    exports_to_index: Vec<U2>,
+}
+
+#[derive(Debug)]
+pub struct ModuleOpens {
+    opens_index: U2,
+    opens_flags: U2,
+    opens_to_index: Vec<U2>,
+}
+
+#[derive(Debug)]
+pub struct ModuleProvides {
+    provides_index: U2,
+    provides_with_index: Vec<U2>,
+}
+
+#[derive(Debug)]
+pub struct Module {
+    module_name_index: U2,
+    module_flags: U2,
+    module_version_index: U2,
+
+    requires: Vec<ModuleRequires>,
+    exports: Vec<ModuleExports>,
+    opens: Vec<ModuleOpens>,
+
+    uses_index: Vec<U2>,
+
+    provides: Vec<ModuleProvides>,
+}
+
+#[derive(Debug)]
+pub struct MethodParametersInner {
+    name_index: U2,
+    access_flags: U2,
+}
+
+#[derive(Debug)]
+pub struct MethodParameters {
+    parameters: Vec<MethodParametersInner>,
+}
+
+#[derive(Debug)]
+pub struct AnnotationDefault {
+    default_value: ElementValue,
+}
+
+#[derive(Debug)]
+pub struct RuntimeInvisibleTypeAnnotations {
+    annotations: Vec<TypeAnnotation>,
+}
+
+#[derive(Debug)]
+pub struct TypePathInner {
+    type_path_kind: U1,
+    type_argument_index: U1,
+}
+
+#[derive(Debug)]
+pub struct TypePath {
+    path: Vec<TypePathInner>,
+}
+
+#[derive(Debug)]
+pub struct TypeAnnotationInner {
+    element_name_index: U2,
+    value: ElementValue,
+}
+
+#[derive(Debug)]
+pub struct TypeAnnotation {
+    target_info: TargetInfo,
+    target_path: TypePath,
+    type_index: U2,
+    num_element_value_pairs: U2,
+    element_value_pairs: Vec<TypeAnnotationInner>,
+}
+
+#[derive(Debug)]
+pub struct RuntimeVisibleTypeAnnotations {
+    type_annotation: Vec<TypeAnnotation>,
+}
+
+#[derive(Debug)]
+pub struct RuntimeInvisibleAnnotations {
+    annotations: Vec<Annotation>,
+}
+
+#[derive(Debug)]
+pub struct ParameterAnnotationsRuntimeParameterAnnotationsAttr {
+    annotations: Vec<Annotation>,
+}
+
+#[derive(Debug)]
+pub struct RuntimeInvisibleParameterAnnotations {
+    parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
+}
+
+#[derive(Debug)]
+pub struct RuntimeVisibleParameterAnnotations {
+    parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
+}
+
+#[derive(Debug)]
+pub struct EnumConstValue {
+    type_name_index: U2,
+    const_name_index: U2,
+}
+
+#[derive(Debug)]
+pub struct ArrayValue {
+    element_value: Vec<ElementValue>,
+}
+
+#[derive(Debug)]
+pub enum ElementValueUnion {
+    ConstValueIndex(U2),
+    EnumConstValue(EnumConstValue),
+    ClassInfoIndex(U2),
+    AnnotationValue(Annotation),
+    ArrayValue(ArrayValue),
+}
+
+#[derive(Debug)]
+pub struct ElementValue {
+    tag: U1,
+    value: ElementValueUnion,
+}
+
+#[derive(Debug)]
+pub struct AnnotationInner {
+    element_name_index: U2,
+    value: ElementValue,
+}
+
+#[derive(Debug)]
+pub struct Annotation {
+    type_index: U2,
+    num_element_value_pairs: U2,
+    element_value_pairs: Vec<AnnotationInner>,
+}
+
+#[derive(Debug)]
+pub struct RuntimeVisibleAnnotations {
+    annotations: Vec<Annotation>,
+}
+
+#[derive(Debug)]
 pub struct LineNumberTableAttrInner {
     start_pc: U2,
     line_number: U2,
 }
+
+#[derive(Debug)]
+pub struct LocalVariableTypeTableAttrInner {
+    start_pc: U2,
+    length: U2,
+    name_index: U2,
+    signature_index: U2,
+    index: U2,
+}
+
+#[derive(Debug)]
+pub struct LocalVariableTypeTable {
+    local_variable_type_table: Vec<LocalVariableTypeTableAttrInner>,
+}
+
+#[derive(Debug)]
+pub struct Deprecated;
 
 #[derive(Debug)]
 pub struct LocalVariableTableAttrInner {
@@ -145,6 +334,17 @@ pub struct InnerClass {
 #[derive(Debug)]
 pub struct StackMapTable<'class> {
     entries: &'class [U1],
+}
+
+#[derive(Debug)]
+pub struct BootStrapMethodsInner {
+    bootstrap_method_ref: U2,
+    bootstrap_arguments: Vec<U2>,
+}
+
+#[derive(Debug)]
+pub struct BootStrapMethods {
+    bootstrap_methods: Vec<BootStrapMethodsInner>,
 }
 
 #[derive(Debug)]
@@ -323,7 +523,9 @@ impl<'class> Parser<'class> {
 
         for _ in 0..length {
             let attribute_name_index = self.u2();
-            if is_module {}
+            if is_module {
+                // TODO
+            }
             let len = self.u4();
             let info = self.u1_range(len as usize);
 
