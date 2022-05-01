@@ -805,7 +805,13 @@ impl<'class> Parser<'class> {
                             let length = self.u2();
                             let mut annotations: Vec<Annotation> = Vec::new();
 
-                            for _ in 0..length {}
+                            for _ in 0..length {
+                                annotations.push(self.parse_annotations());
+                            }
+
+                            attributes.push(Attributes::RuntimeVisibleAnnotations(
+                                RuntimeVisibleAnnotations { annotations },
+                            ))
                         }
 
                         _ => todo!(),
