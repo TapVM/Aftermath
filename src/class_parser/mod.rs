@@ -8,6 +8,8 @@ type U2 = u16;
 type U4 = u32;
 type Result<T, E = ParsingError> = core::result::Result<T, E>;
 
+// -------------------------------------------------------------------------------------------------
+
 #[derive(Debug)]
 pub enum CpNode<'class> {
     Class(U2),
@@ -59,7 +61,7 @@ pub enum Attributes<'class> {
     ModuleMainClass(ModuleMainClass),
     NestHost(NestHost),
     NestMembers(NestMembers),
-    Record(Record),
+    Record(Record<'class>),
     PermittedSubclasses(PermittedSubclasses),
 }
 
@@ -75,6 +77,45 @@ pub enum TargetInfo {
     CatchTarget,
     OffsetTarget,
     TypeArgumentTarget,
+}
+
+// -------------------------------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct PermittedSubclasses {
+    classes: Vec<U2>,
+}
+
+#[derive(Debug)]
+pub struct RecordComponentInfo<'class> {
+    name_index: U2,
+    descriptor_index: U2,
+    attributes: Vec<Attributes<'class>>,
+}
+
+#[derive(Debug)]
+pub struct Record<'class> {
+    components: Vec<RecordComponentInfo<'class>>,
+}
+
+#[derive(Debug)]
+pub struct ModulePackages {
+    package_index: Vec<U2>,
+}
+
+#[derive(Debug)]
+pub struct ModuleMainClass {
+    main_class_index: U2,
+}
+
+#[derive(Debug)]
+pub struct NestHost {
+    host_class_index: U2,
+}
+
+#[derive(Debug)]
+pub struct NestMembers {
+    classes: Vec<U2>,
 }
 
 #[derive(Debug)]
@@ -109,13 +150,10 @@ pub struct Module {
     module_name_index: U2,
     module_flags: U2,
     module_version_index: U2,
-
     requires: Vec<ModuleRequires>,
     exports: Vec<ModuleExports>,
     opens: Vec<ModuleOpens>,
-
     uses_index: Vec<U2>,
-
     provides: Vec<ModuleProvides>,
 }
 
@@ -392,6 +430,8 @@ pub struct ClassFile<'class> {
     pub methods: Vec<MethodInfo<'class>>,
     pub attributes: Vec<AttributeInfo<'class>>,
 }
+
+// -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub struct Parser<'class> {
