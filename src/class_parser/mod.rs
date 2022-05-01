@@ -67,16 +67,16 @@ pub enum Attributes<'class> {
 
 #[derive(Debug)]
 pub enum TargetInfo {
-    TypeParameterTarget,
-    SupertypeTarget,
-    TypeParameterBoundTarget,
-    EmptyTarget,
-    FormalParameterTarget,
-    ThrowsTarget,
-    LocalvarTarget,
-    CatchTarget,
-    OffsetTarget,
-    TypeArgumentTarget,
+    TypeParameter,
+    Supertype,
+    TypeParameterBound,
+    Empty,
+    FormalParameter,
+    Throws,
+    Localvar,
+    Catch,
+    Offset,
+    TypeArgument,
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -605,7 +605,7 @@ impl<'class> Parser<'class> {
                 return Err(ParsingError::ContainsOtherFlagsWhileBeingAModule);
             }
 
-            if !(major_v >= 53) {
+            if major_v < 53 {
                 return Err(ParsingError::InvalidVersionForModule);
             }
 
@@ -683,9 +683,7 @@ impl<'class> Parser<'class> {
         }
 
         let attributes_length = self.u2();
-        let attributes: Vec<AttributeInfo>;
-
-        if is_module {
+        let attributes = if is_module {
             if super_class != 0
                 || interfaces_length != 0
                 || fields_length != 0
@@ -694,10 +692,10 @@ impl<'class> Parser<'class> {
                 return Err(ParsingError::ModuleHasIllegalVariables);
             }
 
-            attributes = self.parse_attributes(attributes_length, true)?;
+            self.parse_attributes(attributes_length, true)?
         } else {
-            attributes = self.parse_attributes(attributes_length, false)?;
-        }
+            self.parse_attributes(attributes_length, false)?
+        };
 
         Ok(ClassFile {
             minor_v,
