@@ -1,6 +1,10 @@
 #![allow(dead_code)]
 
+use std::str::Utf8Error;
+
 use thiserror::Error;
+
+use super::U2;
 
 #[derive(Error, Debug)]
 pub enum ParsingError {
@@ -62,6 +66,23 @@ pub enum ParsingError {
 
     #[error("Error (Class file) -> The field {0} provided an illegal index -- {1}, since it expected the {2} type rather it got the {3} type.")]
     InvalidIndexType(String, u16, String, String),
+
+    #[error(
+        "Error (Attributes) -> An attribute gave an invalid index ({0}) to the constant pool."
+    )]
+    AttributeIndex(U2),
+
+    #[error("Error (Attributes) -> An attribute index returned a constant pool node which was NOT Constant_Utf8")]
+    AttributeNotUtf8,
+
+    #[error("Error (Utf8) -> UTF8 node in constant pool is NOT valid UTF8")]
+    Utf8Error(#[from] Utf8Error),
+
+    #[error("Error (Attributes) -> The attribute length should've been {0}, but got {1}")]
+    AttributeLength(U2, U2),
+
+    #[error("Error (Attributes) -> The Value attribute can only have the Integer, Float, Long, Double or String constant pool index.")]
+    IllegalValueAttribute,
 
     #[error("I/O Error -> ")]
     IoError(#[from] std::io::Error),

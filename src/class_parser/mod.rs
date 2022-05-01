@@ -28,7 +28,7 @@ pub enum CpNode<'class> {
     Long(U4, U4),
     Double(U4, U4),
     MethodHandle(U1, U2),
-    Utf8(&'class [U1]),
+    Utf8(&'class str),
 }
 
 #[derive(Debug)]
@@ -77,6 +77,15 @@ pub enum TargetInfo {
     Catch,
     Offset,
     TypeArgument,
+}
+
+#[derive(Debug)]
+pub enum ElementValueUnion {
+    ConstValueIndex(U2),
+    EnumConstValue(EnumConstValue),
+    ClassInfoIndex(U2),
+    AnnotationValue(Annotation),
+    ArrayValue(ArrayValue),
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -241,15 +250,6 @@ pub struct ArrayValue {
 }
 
 #[derive(Debug)]
-pub enum ElementValueUnion {
-    ConstValueIndex(U2),
-    EnumConstValue(EnumConstValue),
-    ClassInfoIndex(U2),
-    AnnotationValue(Annotation),
-    ArrayValue(ArrayValue),
-}
-
-#[derive(Debug)]
 pub struct ElementValue {
     tag: U1,
     value: ElementValueUnion,
@@ -396,17 +396,11 @@ pub struct Exceptions {
 }
 
 #[derive(Debug)]
-pub struct AttributeInfo<'class> {
-    pub attribute_name_index: U2,
-    pub info: &'class [U1],
-}
-
-#[derive(Debug)]
 pub struct FieldInfo<'class> {
     pub access_flags: U2,
     pub name_index: U2,
     pub descriptor_index: U2,
-    pub attributes: Vec<AttributeInfo<'class>>,
+    pub attributes: Vec<Attributes<'class>>,
 }
 
 #[derive(Debug)]
@@ -414,7 +408,7 @@ pub struct MethodInfo<'class> {
     pub access_flags: U2,
     pub name_index: U2,
     pub descriptor_index: U2,
-    pub attributes: Vec<AttributeInfo<'class>>,
+    pub attributes: Vec<Attributes<'class>>,
 }
 
 #[derive(Debug)]
@@ -428,7 +422,7 @@ pub struct ClassFile<'class> {
     pub interfaces: Vec<U2>,
     pub fields: Vec<FieldInfo<'class>>,
     pub methods: Vec<MethodInfo<'class>>,
-    pub attributes: Vec<AttributeInfo<'class>>,
+    pub attributes: Vec<Attributes<'class>>,
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -518,7 +512,7 @@ impl<'class> Parser<'class> {
 
                 1 => {
                     let length = self.u2().into();
-                    cp.push(CpNode::Utf8(self.u1_range(length)));
+                    cp.push(CpNode::Utf8(std::str::from_utf8(self.u1_range(length))?));
                 }
 
                 15 => {
@@ -554,25 +548,92 @@ impl<'class> Parser<'class> {
         Ok(cp)
     }
 
+    pub fn assert_attr_length(&self, length: U2, expected: U2) -> Result<()> {
+        if length != expected {
+            return Err(ParsingError::AttributeLength(expected, length));
+        }
+
+        Ok(())
+    }
+
     pub fn parse_attributes(
         &mut self,
         length: U2,
+        constant_pool: &[CpNode],
         is_module: bool,
-    ) -> Result<Vec<AttributeInfo<'class>>> {
-        let mut attributes = Vec::with_capacity(length as usize);
+    ) -> Result<Vec<Attributes<'class>>> {
+        let mut attributes: Vec<Attributes> = Vec::new();
 
         for _ in 0..length {
             let attribute_name_index = self.u2();
-            if is_module {
-                // TODO
-            }
-            let len = self.u4();
-            let info = self.u1_range(len as usize);
 
-            attributes.push(AttributeInfo {
-                attribute_name_index,
-                info,
-            });
+            if let Some(data) = constant_pool.get(attribute_name_index as usize + 1) {
+                if let CpNode::Utf8(data) = data {
+                    // -----------------------------------------------------------------------------
+
+                    match *data {
+                        "ConstantValue" => {
+                            let attribute_length = self.u2();
+                            self.assert_attr_length(attribute_length, 2)?;
+
+                            let constantvalue_index = self.u2();
+                            if let Some(data) = constant_pool.get(constantvalue_index as usize) {
+                                match data {
+                                    &CpNode::Integer(..)
+                                    | &CpNode::String(..)
+                                    | &CpNode::Long(..)
+                                    | &CpNode::Double(..)
+                                    | &CpNode::Float(..) => {}
+                                    _ => return Err(ParsingError::IllegalValueAttribute),
+                                }
+                            } else {
+                                return Err(ParsingError::AttributeIndex(constantvalue_index));
+                            }
+
+                            attributes.push(Attributes::Value(Value {
+                                value_index: constantvalue_index,
+                            }))
+                        }
+
+                        "Code" => {
+                            let max_stack = self.u2();
+                            let max_locals = self.u2();
+                            let code_length = self.u4();
+                            let code = self.u1_range(code_length as usize);
+
+                            let exception_table_length = self.u2();
+                            let mut exception_table: Vec<ExceptionTableAttrCode> = Vec::new();
+
+                            for _ in 0..exception_table_length {
+                                exception_table.push(ExceptionTableAttrCode {
+                                    start_pc: self.u2(),
+                                    end_pc: self.u2(),
+                                    handler_pc: self.u2(),
+                                    catch_type: self.u2(),
+                                });
+                            }
+
+                            let attributes_count = self.u2();
+                            let local_attributes =
+                                self.parse_attributes(attributes_count, constant_pool, is_module)?;
+
+                            attributes.push(Attributes::Code(AttrCode {
+                                max_stack,
+                                max_locals,
+                                code,
+                                exception_table,
+                                attributes: local_attributes,
+                            }))
+                        }
+
+                        _ => todo!(),
+                    }
+                } else {
+                    return Err(ParsingError::AttributeNotUtf8);
+                }
+            } else {
+                return Err(ParsingError::AttributeIndex(attribute_name_index));
+            }
         }
 
         Ok(attributes)
@@ -596,7 +657,7 @@ impl<'class> Parser<'class> {
             return Err(ParsingError::MinorVersion);
         }
 
-        let cp = self.parse_child_pool()?;
+        let cp: Vec<CpNode<'class>> = self.parse_child_pool()?;
         let access_flags = self.u2();
         let mut is_module = false;
 
@@ -654,7 +715,7 @@ impl<'class> Parser<'class> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.parse_attributes(attributes_count, false)?;
+            let attributes = self.parse_attributes(attributes_count, &cp, false)?;
 
             fields.push(FieldInfo {
                 access_flags,
@@ -672,7 +733,7 @@ impl<'class> Parser<'class> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.parse_attributes(attributes_count, false)?;
+            let attributes = self.parse_attributes(attributes_count, &cp, false)?;
 
             methods.push(MethodInfo {
                 access_flags,
@@ -692,9 +753,9 @@ impl<'class> Parser<'class> {
                 return Err(ParsingError::ModuleHasIllegalVariables);
             }
 
-            self.parse_attributes(attributes_length, true)?
+            self.parse_attributes(attributes_length, &cp, true)?
         } else {
-            self.parse_attributes(attributes_length, false)?
+            self.parse_attributes(attributes_length, &cp, false)?
         };
 
         Ok(ClassFile {
