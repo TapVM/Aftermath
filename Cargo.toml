@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 thiserror = "1"
-byteorder = "1.4"
 
 [dev-dependencies]
 criterion = "0.3"
