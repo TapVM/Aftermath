@@ -430,23 +430,22 @@ pub struct ClassFile<'class> {
 #[derive(Debug)]
 pub struct Parser<'class> {
     pub bytes: &'class [U1],
-    pub index: usize,
 }
 
 impl<'class> Parser<'class> {
-    pub fn new(bytes: &'class [U1]) -> Self {
-        Self { bytes, index: 0 }
+    pub fn new(bytes: &'class [u8]) -> Self {
+        Self { bytes }
     }
 
     pub fn u1(&mut self) -> U1 {
-        let output = self.bytes[self.index];
-        self.index += 1;
+        let output = self.bytes[0];
+        self.bytes = &self.bytes[1..];
         output
     }
 
-    pub fn u1_range(&mut self, end: usize) -> &'class [U1] {
-        let output = &self.bytes[self.index..self.index + end];
-        self.index += end;
+    pub fn u1_range(&mut self, length: U4) -> &'class [U1] {
+        let output = &self.bytes[0..length as usize];
+        self.bytes = &self.bytes[length as usize..];
         output
     }
 
@@ -454,456 +453,261 @@ impl<'class> Parser<'class> {
         U2::from_be_bytes(self.u1_range(2).try_into().unwrap())
     }
 
+    pub fn u2_range(&mut self, length: U4) -> Vec<U2> {
+        let mut bytes = Vec::new();
+
+        for _ in 0..length {
+            bytes.push(self.u2());
+        }
+
+        bytes
+    }
+
     pub fn u4(&mut self) -> U4 {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
-    pub fn has_flag(&mut self, integer: U2, flag: U2) -> bool {
-        integer & flag != 0
-    }
-
-    pub fn parse_child_pool(&mut self) -> Result<Vec<CpNode<'class>>> {
-        let length = self.u2();
-        let mut cp: Vec<CpNode<'class>> = Vec::with_capacity((length - 1).into());
-
-        for _ in 0..length - 1 {
+    pub fn cp(&mut self, length: U2) -> Result<Vec<CpNode<'class>>> {
+        let mut pool = Vec::with_capacity(length as usize - 1);
+        for _ in 0..(length - 1_u16) {
             let tag = self.u1();
 
             match tag {
-                7 => {
-                    cp.push(CpNode::Class(self.u2()));
-                }
-
-                9 => {
-                    cp.push(CpNode::FieldRef(self.u2(), self.u2()));
-                }
-
-                10 => {
-                    cp.push(CpNode::MethodRef(self.u2(), self.u2()));
-                }
-
-                11 => {
-                    cp.push(CpNode::InterfaceMethodRef(self.u2(), self.u2()));
-                }
-
-                8 => {
-                    cp.push(CpNode::String(self.u2()));
-                }
-
-                3 => {
-                    cp.push(CpNode::Integer(self.u4()));
-                }
-
-                4 => {
-                    cp.push(CpNode::Float(self.u4()));
-                }
-
-                5 => {
-                    cp.push(CpNode::Long(self.u4(), self.u4()));
-                }
-
-                6 => {
-                    cp.push(CpNode::Double(self.u4(), self.u4()));
-                }
-
-                12 => {
-                    cp.push(CpNode::NameAndType(self.u2(), self.u2()));
-                }
-
+                7 => pool.push(CpNode::Class(self.u2())),
+                9 => pool.push(CpNode::FieldRef(self.u2(), self.u2())),
+                10 => pool.push(CpNode::FieldRef(self.u2(), self.u2())),
+                11 => pool.push(CpNode::MethodRef(self.u2(), self.u2())),
+                8 => pool.push(CpNode::String(self.u2())),
+                3 => pool.push(CpNode::Integer(self.u4())),
+                5 => pool.push(CpNode::Long(self.u4(), self.u4())),
+                6 => pool.push(CpNode::Double(self.u4(), self.u4())),
+                12 => pool.push(CpNode::NameAndType(self.u2(), self.u2())),
                 1 => {
                     let length = self.u2().into();
-                    cp.push(CpNode::Utf8(std::str::from_utf8(self.u1_range(length))?));
+                    pool.push(CpNode::Utf8(std::str::from_utf8(self.u1_range(length))?));
                 }
-
-                15 => {
-                    cp.push(CpNode::MethodHandle(self.u1(), self.u2()));
-                }
-
-                16 => {
-                    cp.push(CpNode::MethodType(self.u2()));
-                }
-
-                17 => {
-                    cp.push(CpNode::Dynamic(self.u2(), self.u2()));
-                }
-
-                18 => {
-                    cp.push(CpNode::InvokeDynamic(self.u2(), self.u2()));
-                }
-
-                19 => {
-                    cp.push(CpNode::Module(self.u2()));
-                }
-
-                20 => {
-                    cp.push(CpNode::Package(self.u2()));
-                }
-
-                _ => {
-                    return Err(ParsingError::ConstantPoolTag(tag));
-                }
+                15 => pool.push(CpNode::MethodHandle(self.u1(), self.u2())),
+                16 => pool.push(CpNode::MethodType(self.u2())),
+                17 => pool.push(CpNode::Dynamic(self.u2(), self.u2())),
+                18 => pool.push(CpNode::InvokeDynamic(self.u2(), self.u2())),
+                19 => pool.push(CpNode::Module(self.u2())),
+                20 => pool.push(CpNode::Package(self.u2())),
+                _ => return Err(ParsingError::ConstantPoolTag(tag)),
             }
         }
 
-        Ok(cp)
+        Ok(pool)
     }
 
-    pub fn assert_attr_length(&self, length: U2, expected: U2) -> Result<()> {
-        if length != expected {
-            return Err(ParsingError::AttributeLength(expected, length));
-        }
-
-        Ok(())
-    }
-
-    pub fn parse_element_value(&mut self) -> ElementValue {
-        let element_name_index = self.u2();
-        let value: ElementValueUnion;
-        let tag = self.u1();
-        let value_tag = tag as char;
-
-        match value_tag {
-            'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z' | 's' => {
-                value = ElementValueUnion::ConstValueIndex(self.u2())
-            }
-
-            'e' => {
-                value = ElementValueUnion::EnumConstValue(EnumConstValue {
-                    type_name_index: self.u2(),
-                    const_name_index: self.u2(),
-                })
-            }
-
-            'c' => value = ElementValueUnion::ClassInfoIndex(self.u2()),
-
-            '@' => value = ElementValueUnion::AnnotationValue(self.parse_annotations()),
-
-            '[' => {
-                let length = self.u2();
-                let mut values = Vec::new();
-
-                for _ in 0..length {
-                    values.push(self.parse_element_value());
-                }
-
-                value = ElementValueUnion::ArrayValue(ArrayValue {
-                    element_value: values,
-                })
-            }
-
-            _ => unreachable!(),
-        }
-
-        ElementValue { tag, value }
-    }
-
-    pub fn parse_annotations(&mut self) -> Annotation {
-        let type_index = self.u2();
-        let num_element_variable_pairs = self.u2();
-        let mut element_value_pairs = Vec::new();
-
-        for _ in 0..num_element_variable_pairs {
-            element_value_pairs.push(AnnotationInner {
-                element_name_index: self.u2(),
-                value: self.parse_element_value(),
-            })
-        }
-
-        Annotation {
-            type_index,
-            element_value_pairs,
-        }
-    }
-
-    pub fn parse_attributes(
-        &mut self,
-        length: U2,
-        constant_pool: &[CpNode],
-        is_module: bool,
-    ) -> Result<Vec<Attributes<'class>>> {
-        let mut attributes: Vec<Attributes> = Vec::new();
+    pub fn attributes(&mut self, length: U2, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
+        let mut attributes = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
             let attribute_name_index = self.u2();
-            let attribute_length = self.u2();
+            let attribute_length = self.u4();
+            let tag = &cp[attribute_name_index as usize - 1];
 
-            if let Some(data) = constant_pool.get(attribute_name_index as usize + 1) {
-                if let CpNode::Utf8(data) = data {
-                    // -----------------------------------------------------------------------------
+            if let CpNode::Utf8(tag) = tag {
+                match *tag {
+                    "SourceFile" => attributes.push(Attributes::SourceFile(SourceFile {
+                        sourcefile_index: self.u2(),
+                    })),
 
-                    match *data {
-                        "ConstantValue" => {
-                            let attribute_length = self.u2();
-                            self.assert_attr_length(attribute_length, 2)?;
+                    "Module" => {
+                        let module_name_index = self.u2();
+                        let module_flags = self.u2();
+                        let module_version_index = self.u2();
 
-                            let constantvalue_index = self.u2();
-                            if let Some(data) = constant_pool.get(constantvalue_index as usize) {
-                                match data {
-                                    &CpNode::Integer(..)
-                                    | &CpNode::String(..)
-                                    | &CpNode::Long(..)
-                                    | &CpNode::Double(..)
-                                    | &CpNode::Float(..) => {}
-                                    _ => return Err(ParsingError::IllegalValueAttribute),
-                                }
-                            } else {
-                                return Err(ParsingError::AttributeIndex(constantvalue_index));
+                        let requires_count = self.u2();
+                        let mut requires = Vec::new();
+
+                        for _ in 0..requires_count {
+                            let requires_index = self.u2();
+                            let requires_flags = self.u2();
+                            let require_version_index = self.u2();
+
+                            requires.push(ModuleRequires {
+                                requires_index,
+                                requires_flags,
+                                require_version_index,
+                            });
+                        }
+
+                        let exports_count = self.u2();
+                        let mut exports = Vec::new();
+                        for _ in 0..exports_count {
+                            let exports_index = self.u2();
+                            let exports_flags = self.u2();
+                            let exports_to_count = self.u2();
+                            let mut exports_to_index = Vec::new();
+
+                            for _ in 0..exports_to_count {
+                                exports_to_index.push(self.u2());
                             }
 
-                            attributes.push(Attributes::Value(Value {
-                                value_index: constantvalue_index,
-                            }))
+                            exports.push(ModuleExports {
+                                exports_index,
+                                exports_flags,
+                                exports_to_index,
+                            });
                         }
 
-                        "Code" => {
-                            let max_stack = self.u2();
-                            let max_locals = self.u2();
-                            let code_length = self.u4();
-                            let code = self.u1_range(code_length as usize);
+                        let opens_count = self.u2();
+                        let mut opens = Vec::new();
 
-                            let exception_table_length = self.u2();
-                            let mut exception_table: Vec<ExceptionTableAttrCode> = Vec::new();
+                        for _ in 0..opens_count {
+                            let opens_index = self.u2();
+                            let opens_flags = self.u2();
+                            let opens_to_count = self.u2();
+                            let mut opens_to_index = Vec::new();
 
-                            for _ in 0..exception_table_length {
-                                exception_table.push(ExceptionTableAttrCode {
-                                    start_pc: self.u2(),
-                                    end_pc: self.u2(),
-                                    handler_pc: self.u2(),
-                                    catch_type: self.u2(),
-                                });
+                            for _ in 0..opens_to_count {
+                                opens_to_index.push(self.u2());
                             }
 
-                            let attributes_count = self.u2();
-                            let local_attributes =
-                                self.parse_attributes(attributes_count, constant_pool, is_module)?;
-
-                            attributes.push(Attributes::Code(AttrCode {
-                                max_stack,
-                                max_locals,
-                                code,
-                                exception_table,
-                                attributes: local_attributes,
-                            }))
+                            opens.push(ModuleOpens {
+                                opens_index,
+                                opens_flags,
+                                opens_to_index,
+                            })
                         }
 
-                        "StackMapTable" => {
-                            let number_of_entries = self.u2();
-                            let entries = self.u1_range(number_of_entries as usize);
+                        let uses_count = self.u2();
+                        let mut uses_index = Vec::new();
 
-                            attributes.push(Attributes::StackMapTable(StackMapTable { entries }))
+                        for _ in 0..uses_count {
+                            uses_index.push(self.u2());
                         }
 
-                        "Exceptions" => {
-                            let number_of_exceptions = self.u2();
-                            let mut exception_index_table: Vec<U2> = Vec::new();
+                        let provides_count = self.u2();
+                        let mut provides = Vec::new();
 
-                            for _ in 0..number_of_exceptions {
-                                exception_index_table.push(self.u2());
+                        for _ in 0..provides_count {
+                            let provides_index = self.u2();
+                            let provides_with_count = self.u2();
+                            let mut provides_with_index = Vec::new();
+
+                            for _ in 0..provides_with_count {
+                                provides_with_index.push(self.u2());
                             }
 
-                            attributes.push(Attributes::Exceptions(Exceptions {
-                                exception_index_table,
-                            }))
+                            provides.push(ModuleProvides {
+                                provides_index,
+                                provides_with_index,
+                            });
                         }
 
-                        "InnerClasses" => {
-                            let number_of_classes = self.u2();
-                            let mut classes: Vec<ClassesInnerClassAttr> = Vec::new();
-
-                            for _ in 0..number_of_classes {
-                                classes.push(ClassesInnerClassAttr {
-                                    inner_class_info_index: self.u2(),
-                                    outer_class_info_index: self.u2(),
-                                    inner_name_index: self.u2(),
-                                    inner_class_access_flags: self.u2(),
-                                })
-                            }
-
-                            attributes.push(Attributes::InnerClass(InnerClass { classes }))
-                        }
-
-                        "EnclosingMethod" => {
-                            attributes.push(Attributes::EnclosingMethod(EnclosingMethod {
-                                class_index: self.u2(),
-                                method_index: self.u2(),
-                            }))
-                        }
-
-                        "Synthetic" => attributes.push(Attributes::Synthetic(Synthetic)),
-
-                        "Signature" => attributes.push(Attributes::Signature(Signature {
-                            signature_index: self.u2(),
-                        })),
-
-                        "SourceFile" => attributes.push(Attributes::SourceFile(SourceFile {
-                            sourcefile_index: self.u2(),
-                        })),
-
-                        "SourceDebugExtension" => {
-                            attributes.push(Attributes::SourceDebugExt(SourceDebugExt {
-                                debug_extension: self.u1_range(attribute_length as usize),
-                            }))
-                        }
-
-                        "LineNumberTable" => {
-                            let length = self.u2();
-                            let mut line_number_table = Vec::new();
-
-                            for _ in 0..length {
-                                line_number_table.push(LineNumberTableAttrInner {
-                                    start_pc: self.u2(),
-                                    line_number: self.u2(),
-                                })
-                            }
-
-                            attributes.push(Attributes::LineNumberTable(LineNumberTable {
-                                line_number_table,
-                            }))
-                        }
-
-                        "LocalVariableTable" => {
-                            let length = self.u2();
-                            let mut local_variable_table = Vec::new();
-
-                            for _ in 0..length {
-                                local_variable_table.push(LocalVariableTableAttrInner {
-                                    start_pc: self.u2(),
-                                    length: self.u2(),
-                                    name_index: self.u2(),
-                                    descriptor_index: self.u2(),
-                                    index: self.u2(),
-                                });
-                            }
-
-                            attributes.push(Attributes::LocalVariableTable(LocalVariableTable {
-                                local_variable_table,
-                            }))
-                        }
-
-                        "LocalVariableTypeTable" => {
-                            let length = self.u2();
-                            let mut local_variable_type_table = Vec::new();
-
-                            for _ in 0..length {
-                                local_variable_type_table.push(LocalVariableTypeTableAttrInner {
-                                    start_pc: self.u2(),
-                                    length: self.u2(),
-                                    name_index: self.u2(),
-                                    signature_index: self.u2(),
-                                    index: self.u2(),
-                                });
-                            }
-
-                            attributes.push(Attributes::LocalVariableTypeTable(
-                                LocalVariableTypeTable {
-                                    local_variable_type_table,
-                                },
-                            ))
-                        }
-
-                        "RuntimeVisibleAnnotations" => {
-                            let length = self.u2();
-                            let mut annotations: Vec<Annotation> = Vec::new();
-
-                            for _ in 0..length {
-                                annotations.push(self.parse_annotations());
-                            }
-
-                            attributes.push(Attributes::RuntimeVisibleAnnotations(
-                                RuntimeVisibleAnnotations { annotations },
-                            ))
-                        }
-
-                        _ => todo!(),
+                        attributes.push(Attributes::Module(Module {
+                            module_name_index,
+                            module_flags,
+                            module_version_index,
+                            requires,
+                            exports,
+                            opens,
+                            uses_index,
+                            provides,
+                        }))
                     }
-                } else {
-                    return Err(ParsingError::AttributeNotUtf8);
+
+                    "Code" => {
+                        let max_stack = self.u2();
+                        let max_locals = self.u2();
+                        let code_length = self.u4();
+                        let code = self.u1_range(code_length);
+                        let exception_table_length = self.u2();
+                        let mut exception_table = Vec::new();
+
+                        for _ in 0..exception_table_length {
+                            let start_pc = self.u2();
+                            let end_pc = self.u2();
+                            let handler_pc = self.u2();
+                            let catch_type = self.u2();
+
+                            exception_table.push(ExceptionTableAttrCode {
+                                start_pc,
+                                end_pc,
+                                handler_pc,
+                                catch_type,
+                            });
+                        }
+
+                        let attributes_count = self.u2();
+                        let local_attributes = self.attributes(attributes_count, cp)?;
+
+                        attributes.push(Attributes::Code(AttrCode {
+                            max_stack,
+                            max_locals,
+                            code,
+                            exception_table,
+                            attributes: local_attributes,
+                        }))
+                    }
+
+                    "LineNumberTable" => {
+                        let line_number_table_length = self.u2();
+                        let mut line_number_table = Vec::new();
+
+                        for _ in 0..line_number_table_length {
+                            let start_pc = self.u2();
+                            let line_number = self.u2();
+
+                            line_number_table.push(LineNumberTableAttrInner {
+                                start_pc,
+                                line_number,
+                            })
+                        }
+
+                        attributes.push(Attributes::LineNumberTable(LineNumberTable {
+                            line_number_table,
+                        }))
+                    }
+
+                    "StackMapTable" => {
+                        let number_of_entries = self.u2();
+                        let entries = self.u1_range(number_of_entries.into());
+
+                        attributes.push(Attributes::StackMapTable(StackMapTable { entries }))
+                    }
+
+                    _ => todo!("{} {}", tag, attribute_length),
                 }
             } else {
-                return Err(ParsingError::AttributeIndex(attribute_name_index));
+                return Err(ParsingError::AttributeNotUtf8);
             }
         }
 
         Ok(attributes)
     }
 
-    pub fn parse(&mut self) -> Result<ClassFile<'class>> {
-        let magic = self.u4();
+    pub fn methods(&mut self, length: U2, cp: &Vec<CpNode>) -> Result<Vec<MethodInfo>> {
+        let mut methods = Vec::with_capacity(length as usize);
 
-        if magic != 0xCAFEBABE {
-            return Err(ParsingError::Magic);
-        }
-
-        let minor_v = self.u2();
-        let major_v = self.u2();
-
-        if !(45..=61).contains(&major_v) {
-            return Err(ParsingError::MajorVersion);
-        }
-
-        if 56 <= major_v && !(minor_v == 0 || minor_v == 65535) {
-            return Err(ParsingError::MinorVersion);
-        }
-
-        let cp: Vec<CpNode<'class>> = self.parse_child_pool()?;
-        let access_flags = self.u2();
-        let mut is_module = false;
-
-        if self.has_flag(access_flags, 0x8000) {
-            if access_flags != 0x8000 {
-                return Err(ParsingError::ContainsOtherFlagsWhileBeingAModule);
-            }
-
-            if major_v < 53 {
-                return Err(ParsingError::InvalidVersionForModule);
-            }
-
-            is_module = true;
-        } else {
-            if self.has_flag(access_flags, 0x0200) {
-                if !self.has_flag(access_flags, 0x0400) {
-                    return Err(ParsingError::InterfaceWithoutAbstract);
-                }
-
-                if self.has_flag(access_flags, 0x0010)
-                    || self.has_flag(access_flags, 0x0020)
-                    || self.has_flag(access_flags, 0x4000)
-                    || self.has_flag(access_flags, 0x8000)
-                {
-                    return Err(ParsingError::ContainsIllegalFlagsAsInterface);
-                }
-            } else {
-                if self.has_flag(access_flags, 0x2000) || self.has_flag(access_flags, 0x8000) {
-                    return Err(ParsingError::ContainsIllegalFlagsAsNonInterface);
-                }
-
-                if self.has_flag(access_flags, 0x0010) && self.has_flag(access_flags, 0x0400) {
-                    return Err(ParsingError::ContainsFinalAndAbstractAsNonInterface);
-                }
-            }
-
-            if self.has_flag(access_flags, 0x2000) && !self.has_flag(access_flags, 0x0200) {
-                return Err(ParsingError::AnnotationWithoutInterface);
-            }
-        }
-
-        let this_class = self.u2();
-        let super_class = self.u2();
-        let interfaces_length = self.u2();
-
-        let mut interfaces = Vec::with_capacity(interfaces_length as usize);
-        for _ in 0..interfaces_length {
-            interfaces.push(self.u2());
-        }
-
-        let fields_length = self.u2();
-        let mut fields = Vec::with_capacity(fields_length as usize);
-        for _ in 0..fields_length {
+        for _ in 0..length {
             let access_flags = self.u2();
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.parse_attributes(attributes_count, &cp, false)?;
+            let attributes = self.attributes(attributes_count, cp)?;
+            methods.push(MethodInfo {
+                access_flags,
+                name_index,
+                descriptor_index,
+                attributes,
+            })
+        }
+
+        Ok(methods)
+    }
+
+    pub fn fields(&mut self, length: U2, cp: &Vec<CpNode>) -> Result<Vec<FieldInfo>> {
+        let mut fields = Vec::with_capacity(length as usize);
+
+        for _ in 0..length {
+            let access_flags = self.u2();
+            let name_index = self.u2();
+            let descriptor_index = self.u2();
+            let attributes_count = self.u2();
+            let attributes = self.attributes(attributes_count, &cp)?;
 
             fields.push(FieldInfo {
                 access_flags,
@@ -913,50 +717,47 @@ impl<'class> Parser<'class> {
             })
         }
 
-        let methods_length = self.u2();
-        let mut methods = Vec::with_capacity(methods_length as usize);
+        Ok(fields)
+    }
 
-        for _ in 0..methods_length {
-            let access_flags = self.u2();
-            let name_index = self.u2();
-            let descriptor_index = self.u2();
-            let attributes_count = self.u2();
-            let attributes = self.parse_attributes(attributes_count, &cp, false)?;
+    pub fn parse(&mut self) -> Result<ClassFile<'class>> {
+        let magic = self.u4();
 
-            methods.push(MethodInfo {
-                access_flags,
-                name_index,
-                descriptor_index,
-                attributes,
-            })
+        if magic != 0xCAFEBABE {
+            return Err(ParsingError::Magic);
         }
 
-        let attributes_length = self.u2();
-        let attributes = if is_module {
-            if super_class != 0
-                || interfaces_length != 0
-                || fields_length != 0
-                || methods_length != 0
-            {
-                return Err(ParsingError::ModuleHasIllegalVariables);
-            }
+        let buffer = self.u2_range(3);
+        let minor_v = buffer[0];
+        let major_v = buffer[1];
+        let cp_count = buffer[2];
+        let cp = self.cp(cp_count)?;
 
-            self.parse_attributes(attributes_length, &cp, true)?
-        } else {
-            self.parse_attributes(attributes_length, &cp, false)?
-        };
+        let buffer = self.u2_range(4);
+        let access_flags = buffer[0];
+        let this_class = buffer[1];
+        let super_class = buffer[2];
+
+        let interfaces_count = buffer[3];
+        let interfaces = self.u2_range(interfaces_count as u32);
+        let fields_count = self.u2();
+        let fields = self.fields(fields_count, &cp)?;
+        let methods_count = self.u2();
+        let methods = self.methods(methods_count, &cp)?;
+        let attributes_count = self.u2();
+        let attributes = self.attributes(attributes_count, &cp)?;
 
         Ok(ClassFile {
-            minor_v,
-            major_v,
-            cp,
-            access_flags,
-            this_class,
-            super_class,
-            interfaces,
-            fields,
-            methods,
-            attributes,
+            minor_v: 1,
+            major_v: 1,
+            cp: Vec::new(),
+            access_flags: 1,
+            this_class: 1,
+            super_class: 1,
+            interfaces: Vec::new(),
+            fields: Vec::new(),
+            methods: Vec::new(),
+            attributes: Vec::new(),
         })
     }
 }

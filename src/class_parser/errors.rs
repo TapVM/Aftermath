@@ -4,7 +4,7 @@ use std::str::Utf8Error;
 
 use thiserror::Error;
 
-use super::U2;
+use super::{U2, U4};
 
 #[derive(Error, Debug)]
 pub enum ParsingError {
@@ -79,7 +79,7 @@ pub enum ParsingError {
     Utf8Error(#[from] Utf8Error),
 
     #[error("Error (Attributes) -> The attribute length should've been {0}, but got {1}")]
-    AttributeLength(U2, U2),
+    AttributeLength(U4, U4),
 
     #[error("Error (Attributes) -> The Value attribute can only have the Integer, Float, Long, Double or String constant pool index.")]
     IllegalValueAttribute,
