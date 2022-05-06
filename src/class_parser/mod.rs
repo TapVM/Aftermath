@@ -68,7 +68,7 @@ pub enum Attributes<'class> {
 
 #[derive(Debug)]
 pub enum TargetInfo {
-    TypeParameter,
+    TypeParameterTarget,
     Supertype,
     TypeParameterBound,
     Empty,
@@ -81,7 +81,7 @@ pub enum TargetInfo {
 }
 
 #[derive(Debug)]
-pub enum ElementValueUnion {
+pub enum ElementValue {
     ConstValueIndex(U2),
     EnumConstValue(EnumConstValue),
     ClassInfoIndex(U2),
@@ -248,12 +248,6 @@ pub struct EnumConstValue {
 #[derive(Debug)]
 pub struct ArrayValue {
     element_value: Vec<ElementValue>,
-}
-
-#[derive(Debug)]
-pub struct ElementValue {
-    tag: U1,
-    value: ElementValueUnion,
 }
 
 #[derive(Debug)]
@@ -470,6 +464,76 @@ impl<'class> Parser<'class> {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
+    pub fn element_value(&mut self) -> ElementValue {
+        let tag = self.u1();
+
+        match tag as char {
+            'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 's' => {
+                ElementValue::ConstValueIndex(self.u2())
+            }
+
+            'e' => {
+                let type_name_index = self.u2();
+                let const_name_index = self.u2();
+
+                ElementValue::EnumConstValue(EnumConstValue {
+                    type_name_index,
+                    const_name_index,
+                })
+            }
+
+            'c' => ElementValue::ClassInfoIndex(self.u2()),
+
+            '@' => ElementValue::AnnotationValue(self.annotation()),
+
+            '[' => {
+                let length = self.u2();
+                let mut values = Vec::new();
+
+                for _ in 0..self.to_u2(length) {
+                    values.push(self.element_value());
+                }
+
+                ElementValue::ArrayValue(ArrayValue {
+                    element_value: values,
+                })
+            }
+
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn annotation(&mut self) -> Annotation {
+        let type_index = self.u2();
+        let num_element_value_pairs = self.u2();
+        let mut element_value_pairs = Vec::new();
+
+        for _ in 0..self.to_u2(num_element_value_pairs) {
+            let element_name_index = self.u2();
+            let value = self.element_value();
+
+            element_value_pairs.push(AnnotationInner {
+                element_name_index,
+                value,
+            })
+        }
+
+        Annotation {
+            type_index,
+            element_value_pairs,
+        }
+    }
+
+    pub fn annotation_range(&mut self, length: u16) -> Vec<Annotation> {
+        let mut annotations = Vec::new();
+
+        for _ in 0..length {
+            annotations.push(self.annotation());
+        }
+
+        annotations
+    }
+
     pub fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>> {
         let mut pool = Vec::with_capacity(length as usize - 1);
         for _ in 0..(length - 1_u16) {
@@ -505,6 +569,70 @@ impl<'class> Parser<'class> {
         Ok(pool)
     }
 
+    pub fn type_annotation(&mut self) -> TypeAnnotation {
+        let target_type = self.u1();
+
+        let target_info: TargetInfo = match target_type {
+            0 => TargetInfo::TypeParameterTarget,
+            1 => TargetInfo::Supertype,
+            2 => TargetInfo::TypeParameterBound,
+            3 => TargetInfo::Empty,
+            4 => TargetInfo::FormalParameter,
+            5 => TargetInfo::Throws,
+            6 => TargetInfo::Localvar,
+            7 => TargetInfo::Catch,
+            8 => TargetInfo::Offset,
+            9 => TargetInfo::TypeArgument,
+            _ => unreachable!(),
+        };
+
+        let type_path_length = self.u1();
+        let mut path = Vec::new();
+
+        for _ in 0..type_path_length {
+            let type_path_kind = self.u1();
+            let type_argument_index = self.u1();
+            path.push(TypePathInner {
+                type_path_kind,
+                type_argument_index,
+            })
+        }
+
+        let target_path = TypePath { path };
+
+        let type_index = self.u2();
+        let num_element_value_pairs = self.u2();
+        let mut element_value_pairs = Vec::new();
+
+        for _ in 0..self.to_u2(num_element_value_pairs) {
+            let element_name_index = self.u2();
+            let value = self.element_value();
+
+            element_value_pairs.push(TypeAnnotationInner {
+                element_name_index,
+                value,
+            })
+        }
+
+        TypeAnnotation {
+            target_info,
+            target_path,
+            type_index,
+            num_element_value_pairs,
+            element_value_pairs,
+        }
+    }
+
+    pub fn type_annotation_range(&mut self, length: u16) -> Vec<TypeAnnotation> {
+        let mut annotations = Vec::new();
+
+        for _ in 0..length {
+            annotations.push(self.type_annotation());
+        }
+
+        annotations
+    }
+
     pub fn attributes(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
         let mut attributes = Vec::with_capacity(length as usize);
 
@@ -515,6 +643,10 @@ impl<'class> Parser<'class> {
 
             if let CpNode::Utf8(tag) = tag {
                 match *tag {
+                    "ConstantValue" => attributes.push(Attributes::Value(Value {
+                        value_index: self.u2(),
+                    })),
+
                     "SourceFile" => attributes.push(Attributes::SourceFile(SourceFile {
                         sourcefile_index: self.u2(),
                     })),
@@ -661,6 +793,180 @@ impl<'class> Parser<'class> {
                         attributes.push(Attributes::StackMapTable(StackMapTable { entries }))
                     }
 
+                    "Exceptions" => {
+                        let number_of_exceptions = self.u2();
+                        let exception_index_table =
+                            self.u2_range(self.to_u2(number_of_exceptions).into());
+
+                        attributes.push(Attributes::Exceptions(Exceptions {
+                            exception_index_table,
+                        }))
+                    }
+
+                    "InnerClasses" => {
+                        let number_of_classes = self.u2();
+                        let mut classes = Vec::new();
+
+                        for _ in 0..self.to_u2(number_of_classes) {
+                            let inner_class_info_index = self.u2();
+                            let outer_class_info_index = self.u2();
+                            let inner_name_index = self.u2();
+                            let inner_class_access_flags = self.u2();
+
+                            classes.push(ClassesInnerClassAttr {
+                                inner_class_info_index,
+                                outer_class_info_index,
+                                inner_name_index,
+                                inner_class_access_flags,
+                            })
+                        }
+
+                        attributes.push(Attributes::InnerClass(InnerClass { classes }))
+                    }
+
+                    "EnclosingMethod" => {
+                        let class_index = self.u2();
+                        let method_index = self.u2();
+
+                        attributes.push(Attributes::EnclosingMethod(EnclosingMethod {
+                            class_index,
+                            method_index,
+                        }))
+                    }
+
+                    "Synthetic" => attributes.push(Attributes::Synthetic(Synthetic)),
+
+                    "Signature" => attributes.push(Attributes::Signature(Signature {
+                        signature_index: self.u2(),
+                    })),
+
+                    "SourceDebugExtension" => {
+                        attributes.push(Attributes::SourceDebugExt(SourceDebugExt {
+                            debug_extension: self.u1_range(attribute_length),
+                        }))
+                    }
+
+                    "LocalVariableTable" => {
+                        let length = self.u2();
+                        let mut local_variable_table = Vec::new();
+
+                        for _ in 0..self.to_u2(length) {
+                            let start_pc = self.u2();
+                            let length = self.u2();
+                            let name_index = self.u2();
+                            let descriptor_index = self.u2();
+                            let index = self.u2();
+
+                            local_variable_table.push(LocalVariableTableAttrInner {
+                                start_pc,
+                                length,
+                                name_index,
+                                descriptor_index,
+                                index,
+                            })
+                        }
+
+                        attributes.push(Attributes::LocalVariableTable(LocalVariableTable {
+                            local_variable_table,
+                        }))
+                    }
+
+                    "LocalTypeTable" => {
+                        let length = self.u2();
+                        let mut local_variable_type_table = Vec::new();
+
+                        for _ in 0..self.to_u2(length) {
+                            let start_pc = self.u2();
+                            let length = self.u2();
+                            let name_index = self.u2();
+                            let signature_index = self.u2();
+                            let index = self.u2();
+
+                            local_variable_type_table.push(LocalVariableTypeTableAttrInner {
+                                start_pc,
+                                length,
+                                name_index,
+                                signature_index,
+                                index,
+                            })
+                        }
+
+                        attributes.push(Attributes::LocalVariableTypeTable(
+                            LocalVariableTypeTable {
+                                local_variable_type_table,
+                            },
+                        ))
+                    }
+
+                    "Deprecated" => attributes.push(Attributes::Deprecated(Deprecated)),
+
+                    "RuntimeVisibleAnnotation" => {
+                        let length = self.u2();
+                        let annotations = self.annotation_range(self.to_u2(length));
+
+                        attributes.push(Attributes::RuntimeVisibleAnnotations(
+                            RuntimeVisibleAnnotations { annotations },
+                        ))
+                    }
+
+                    "RuntimeInvisibleAnnotation" => {
+                        let length = self.u2();
+                        let annotations = self.annotation_range(self.to_u2(length));
+
+                        attributes.push(Attributes::RuntimeInvisibleAnnotations(
+                            RuntimeInvisibleAnnotations { annotations },
+                        ))
+                    }
+
+                    "RuntimeVisibleParameterAnnotations" => {
+                        let length = self.u1();
+                        let mut parameter_annotations = Vec::new();
+
+                        for _ in 0..length {
+                            let length = self.u2();
+                            let annotations = self.annotation_range(self.to_u2(length));
+                            parameter_annotations.push(
+                                ParameterAnnotationsRuntimeParameterAnnotationsAttr { annotations },
+                            )
+                        }
+
+                        attributes.push(Attributes::RuntimeVisibleParameterAnnotations(
+                            RuntimeVisibleParameterAnnotations {
+                                parameter_annotations,
+                            },
+                        ))
+                    }
+
+                    "RuntimeInvisibleParameterAnnotations" => {
+                        let length = self.u1();
+                        let mut parameter_annotations = Vec::new();
+
+                        for _ in 0..length {
+                            let length = self.u2();
+                            let annotations = self.annotation_range(self.to_u2(length));
+                            parameter_annotations.push(
+                                ParameterAnnotationsRuntimeParameterAnnotationsAttr { annotations },
+                            )
+                        }
+
+                        attributes.push(Attributes::RuntimeInvisibleParameterAnnotations(
+                            RuntimeInvisibleParameterAnnotations {
+                                parameter_annotations,
+                            },
+                        ))
+                    }
+
+                    "RuntimeVisibleTypeAnnotations" => {
+                        let length = self.u2();
+                        let annotations = self.type_annotation_range(self.to_u2(length));
+
+                        attributes.push(Attributes::RuntimeVisibleTypeAnnotations(
+                            RuntimeVisibleTypeAnnotations {
+                                type_annotation: annotations,
+                            },
+                        ))
+                    }
+
                     _ => todo!("{} {}", tag, attribute_length),
                 }
             } else {
@@ -699,7 +1005,7 @@ impl<'class> Parser<'class> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.attributes(self.to_u2(attributes_count), &cp)?;
+            let attributes = self.attributes(self.to_u2(attributes_count), cp)?;
 
             fields.push(FieldInfo {
                 access_flags,
