@@ -1060,8 +1060,7 @@ impl<'class> Parser<'class> {
                             let name_index = self.u2();
                             let descriptor_index = self.u2();
                             let attributes_count = self.u2();
-                            let attributes =
-                                self.attributes(self.to_u2(attributes_count).into(), cp)?;
+                            let attributes = self.attributes(self.to_u2(attributes_count), cp)?;
 
                             components.push(RecordComponentInfo {
                                 name_index,
