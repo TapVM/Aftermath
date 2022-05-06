@@ -68,7 +68,7 @@ pub enum ParsingError {
     InvalidIndexType(String, u16, String, String),
 
     #[error(
-        "Error (Attributes) -> An attribute gave an invalid index ({0}) to the constant pool."
+        "Error (Attributes) -> An attribute gave an invalid index ({0:?}) to the constant pool."
     )]
     AttributeIndex(U2),
 
