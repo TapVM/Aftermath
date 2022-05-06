@@ -5,7 +5,7 @@ mod errors;
 pub use errors::ParsingError;
 
 type U1 = u8;
-type U2 = u16;
+type U2 = [u8; 2];
 type U4 = u32;
 type Result<T, E = ParsingError> = core::result::Result<T, E>;
 
@@ -37,7 +37,7 @@ pub enum Attributes<'class> {
     Value(Value),
     Code(AttrCode<'class>),
     StackMapTable(StackMapTable<'class>),
-    Exceptions(Exceptions),
+    Exceptions(Exceptions<'class>),
     InnerClass(InnerClass),
     EnclosingMethod(EnclosingMethod),
     Synthetic(Synthetic),
@@ -55,15 +55,15 @@ pub enum Attributes<'class> {
     RuntimeVisibleTypeAnnotations(RuntimeVisibleTypeAnnotations),
     RuntimeInvisibleTypeAnnotations(RuntimeInvisibleTypeAnnotations),
     AnnotationDefault(AnnotationDefault),
-    BootstrapMethods(BootStrapMethods),
+    BootstrapMethods(BootStrapMethods<'class>),
     MethodParameters(MethodParameters),
-    Module(Module),
-    ModulePackages(ModulePackages),
+    Module(Module<'class>),
+    ModulePackages(ModulePackages<'class>),
     ModuleMainClass(ModuleMainClass),
     NestHost(NestHost),
-    NestMembers(NestMembers),
+    NestMembers(NestMembers<'class>),
     Record(Record<'class>),
-    PermittedSubclasses(PermittedSubclasses),
+    PermittedSubclasses(PermittedSubclasses<'class>),
 }
 
 #[derive(Debug)]
@@ -92,8 +92,8 @@ pub enum ElementValueUnion {
 // -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct PermittedSubclasses {
-    classes: Vec<U2>,
+pub struct PermittedSubclasses<'class> {
+    classes: &'class [U2],
 }
 
 #[derive(Debug)]
@@ -109,8 +109,8 @@ pub struct Record<'class> {
 }
 
 #[derive(Debug)]
-pub struct ModulePackages {
-    package_index: Vec<U2>,
+pub struct ModulePackages<'class> {
+    package_index: &'class [U2],
 }
 
 #[derive(Debug)]
@@ -124,8 +124,8 @@ pub struct NestHost {
 }
 
 #[derive(Debug)]
-pub struct NestMembers {
-    classes: Vec<U2>,
+pub struct NestMembers<'class> {
+    classes: &'class [U2],
 }
 
 #[derive(Debug)]
@@ -136,35 +136,35 @@ pub struct ModuleRequires {
 }
 
 #[derive(Debug)]
-pub struct ModuleExports {
+pub struct ModuleExports<'class> {
     exports_index: U2,
     exports_flags: U2,
-    exports_to_index: Vec<U2>,
+    exports_to_index: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct ModuleOpens {
+pub struct ModuleOpens<'class> {
     opens_index: U2,
     opens_flags: U2,
-    opens_to_index: Vec<U2>,
+    opens_to_index: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct ModuleProvides {
+pub struct ModuleProvides<'class> {
     provides_index: U2,
-    provides_with_index: Vec<U2>,
+    provides_with_index: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct Module {
+pub struct Module<'class> {
     module_name_index: U2,
     module_flags: U2,
     module_version_index: U2,
     requires: Vec<ModuleRequires>,
-    exports: Vec<ModuleExports>,
-    opens: Vec<ModuleOpens>,
-    uses_index: Vec<U2>,
-    provides: Vec<ModuleProvides>,
+    exports: Vec<ModuleExports<'class>>,
+    opens: Vec<ModuleOpens<'class>>,
+    uses_index: &'class [U2],
+    provides: Vec<ModuleProvides<'class>>,
 }
 
 #[derive(Debug)]
@@ -375,14 +375,14 @@ pub struct StackMapTable<'class> {
 }
 
 #[derive(Debug)]
-pub struct BootStrapMethodsInner {
+pub struct BootStrapMethodsInner<'class> {
     bootstrap_method_ref: U2,
-    bootstrap_arguments: Vec<U2>,
+    bootstrap_arguments: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct BootStrapMethods {
-    bootstrap_methods: Vec<BootStrapMethodsInner>,
+pub struct BootStrapMethods<'class> {
+    bootstrap_methods: Vec<BootStrapMethodsInner<'class>>,
 }
 
 #[derive(Debug)]
@@ -391,8 +391,8 @@ pub struct Value {
 }
 
 #[derive(Debug)]
-pub struct Exceptions {
-    exception_index_table: Vec<U2>,
+pub struct Exceptions<'class> {
+    exception_index_table: &'class [U2],
 }
 
 #[derive(Debug)]
@@ -419,7 +419,7 @@ pub struct ClassFile<'class> {
     pub access_flags: U2,
     pub this_class: U2,
     pub super_class: U2,
-    pub interfaces: Vec<U2>,
+    pub interfaces: &'class [U2],
     pub fields: Vec<FieldInfo<'class>>,
     pub methods: Vec<MethodInfo<'class>>,
     pub attributes: Vec<Attributes<'class>>,
@@ -450,24 +450,27 @@ impl<'class> Parser<'class> {
     }
 
     pub fn u2(&mut self) -> U2 {
-        U2::from_be_bytes(self.u1_range(2).try_into().unwrap())
+        [self.u1(), self.u1()]
     }
 
-    pub fn u2_range(&mut self, length: U4) -> Vec<U2> {
-        let mut bytes = Vec::new();
-
-        for _ in 0..length {
-            bytes.push(self.u2());
+    pub fn u2_range(&mut self, length: U4) -> &'class [U2] {
+        unsafe {
+            core::slice::from_raw_parts(
+                self.u1_range(length * 2).as_ptr().cast(),
+                length.try_into().unwrap(),
+            )
         }
+    }
 
-        bytes
+    pub fn to_u2(&self, data: U2) -> u16 {
+        u16::from_be_bytes(data)
     }
 
     pub fn u4(&mut self) -> U4 {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
-    pub fn cp(&mut self, length: U2) -> Result<Vec<CpNode<'class>>> {
+    pub fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>> {
         let mut pool = Vec::with_capacity(length as usize - 1);
         for _ in 0..(length - 1_u16) {
             let tag = self.u1();
@@ -483,8 +486,11 @@ impl<'class> Parser<'class> {
                 6 => pool.push(CpNode::Double(self.u4(), self.u4())),
                 12 => pool.push(CpNode::NameAndType(self.u2(), self.u2())),
                 1 => {
-                    let length = self.u2().into();
-                    pool.push(CpNode::Utf8(std::str::from_utf8(self.u1_range(length))?));
+                    let data = self.u2();
+                    let length = self.to_u2(data);
+                    pool.push(CpNode::Utf8(std::str::from_utf8(
+                        self.u1_range(length.into()),
+                    )?));
                 }
                 15 => pool.push(CpNode::MethodHandle(self.u1(), self.u2())),
                 16 => pool.push(CpNode::MethodType(self.u2())),
@@ -499,13 +505,13 @@ impl<'class> Parser<'class> {
         Ok(pool)
     }
 
-    pub fn attributes(&mut self, length: U2, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
+    pub fn attributes(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
         let mut attributes = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
             let attribute_name_index = self.u2();
             let attribute_length = self.u4();
-            let tag = &cp[attribute_name_index as usize - 1];
+            let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
 
             if let CpNode::Utf8(tag) = tag {
                 match *tag {
@@ -521,7 +527,7 @@ impl<'class> Parser<'class> {
                         let requires_count = self.u2();
                         let mut requires = Vec::new();
 
-                        for _ in 0..requires_count {
+                        for _ in 0..self.to_u2(requires_count) {
                             let requires_index = self.u2();
                             let requires_flags = self.u2();
                             let require_version_index = self.u2();
@@ -535,15 +541,12 @@ impl<'class> Parser<'class> {
 
                         let exports_count = self.u2();
                         let mut exports = Vec::new();
-                        for _ in 0..exports_count {
+                        for _ in 0..self.to_u2(exports_count) {
                             let exports_index = self.u2();
                             let exports_flags = self.u2();
                             let exports_to_count = self.u2();
-                            let mut exports_to_index = Vec::new();
-
-                            for _ in 0..exports_to_count {
-                                exports_to_index.push(self.u2());
-                            }
+                            let exports_to_index =
+                                self.u2_range(self.to_u2(exports_to_count).into());
 
                             exports.push(ModuleExports {
                                 exports_index,
@@ -555,15 +558,11 @@ impl<'class> Parser<'class> {
                         let opens_count = self.u2();
                         let mut opens = Vec::new();
 
-                        for _ in 0..opens_count {
+                        for _ in 0..self.to_u2(opens_count) {
                             let opens_index = self.u2();
                             let opens_flags = self.u2();
                             let opens_to_count = self.u2();
-                            let mut opens_to_index = Vec::new();
-
-                            for _ in 0..opens_to_count {
-                                opens_to_index.push(self.u2());
-                            }
+                            let opens_to_index = self.u2_range(self.to_u2(opens_to_count).into());
 
                             opens.push(ModuleOpens {
                                 opens_index,
@@ -573,23 +572,16 @@ impl<'class> Parser<'class> {
                         }
 
                         let uses_count = self.u2();
-                        let mut uses_index = Vec::new();
-
-                        for _ in 0..uses_count {
-                            uses_index.push(self.u2());
-                        }
+                        let uses_index = self.u2_range(self.to_u2(uses_count).into());
 
                         let provides_count = self.u2();
                         let mut provides = Vec::new();
 
-                        for _ in 0..provides_count {
+                        for _ in 0..self.to_u2(provides_count) {
                             let provides_index = self.u2();
                             let provides_with_count = self.u2();
-                            let mut provides_with_index = Vec::new();
-
-                            for _ in 0..provides_with_count {
-                                provides_with_index.push(self.u2());
-                            }
+                            let provides_with_index =
+                                self.u2_range(self.to_u2(provides_with_count).into());
 
                             provides.push(ModuleProvides {
                                 provides_index,
@@ -617,7 +609,7 @@ impl<'class> Parser<'class> {
                         let exception_table_length = self.u2();
                         let mut exception_table = Vec::new();
 
-                        for _ in 0..exception_table_length {
+                        for _ in 0..self.to_u2(exception_table_length) {
                             let start_pc = self.u2();
                             let end_pc = self.u2();
                             let handler_pc = self.u2();
@@ -632,7 +624,7 @@ impl<'class> Parser<'class> {
                         }
 
                         let attributes_count = self.u2();
-                        let local_attributes = self.attributes(attributes_count, cp)?;
+                        let local_attributes = self.attributes(self.to_u2(attributes_count), cp)?;
 
                         attributes.push(Attributes::Code(AttrCode {
                             max_stack,
@@ -647,7 +639,7 @@ impl<'class> Parser<'class> {
                         let line_number_table_length = self.u2();
                         let mut line_number_table = Vec::new();
 
-                        for _ in 0..line_number_table_length {
+                        for _ in 0..self.to_u2(line_number_table_length) {
                             let start_pc = self.u2();
                             let line_number = self.u2();
 
@@ -664,7 +656,7 @@ impl<'class> Parser<'class> {
 
                     "StackMapTable" => {
                         let number_of_entries = self.u2();
-                        let entries = self.u1_range(number_of_entries.into());
+                        let entries = self.u1_range(self.to_u2(number_of_entries).into());
 
                         attributes.push(Attributes::StackMapTable(StackMapTable { entries }))
                     }
@@ -679,7 +671,7 @@ impl<'class> Parser<'class> {
         Ok(attributes)
     }
 
-    pub fn methods(&mut self, length: U2, cp: &Vec<CpNode>) -> Result<Vec<MethodInfo>> {
+    pub fn methods(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<MethodInfo>> {
         let mut methods = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -687,7 +679,7 @@ impl<'class> Parser<'class> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.attributes(attributes_count, cp)?;
+            let attributes = self.attributes(self.to_u2(attributes_count), cp)?;
             methods.push(MethodInfo {
                 access_flags,
                 name_index,
@@ -699,7 +691,7 @@ impl<'class> Parser<'class> {
         Ok(methods)
     }
 
-    pub fn fields(&mut self, length: U2, cp: &Vec<CpNode>) -> Result<Vec<FieldInfo>> {
+    pub fn fields(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<FieldInfo>> {
         let mut fields = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -707,7 +699,7 @@ impl<'class> Parser<'class> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.attributes(attributes_count, &cp)?;
+            let attributes = self.attributes(self.to_u2(attributes_count), &cp)?;
 
             fields.push(FieldInfo {
                 access_flags,
@@ -731,7 +723,7 @@ impl<'class> Parser<'class> {
         let minor_v = buffer[0];
         let major_v = buffer[1];
         let cp_count = buffer[2];
-        let cp = self.cp(cp_count)?;
+        let cp = self.cp(self.to_u2(cp_count))?;
 
         let buffer = self.u2_range(4);
         let access_flags = buffer[0];
@@ -739,22 +731,22 @@ impl<'class> Parser<'class> {
         let super_class = buffer[2];
 
         let interfaces_count = buffer[3];
-        let interfaces = self.u2_range(interfaces_count as u32);
+        let interfaces = self.u2_range(self.to_u2(interfaces_count) as u32);
         let fields_count = self.u2();
-        let fields = self.fields(fields_count, &cp)?;
+        let fields = self.fields(self.to_u2(fields_count), &cp)?;
         let methods_count = self.u2();
-        let methods = self.methods(methods_count, &cp)?;
+        let methods = self.methods(self.to_u2(methods_count), &cp)?;
         let attributes_count = self.u2();
-        let attributes = self.attributes(attributes_count, &cp)?;
+        let attributes = self.attributes(self.to_u2(attributes_count), &cp)?;
 
         Ok(ClassFile {
-            minor_v: 1,
-            major_v: 1,
+            minor_v,
+            major_v,
             cp: Vec::new(),
-            access_flags: 1,
-            this_class: 1,
-            super_class: 1,
-            interfaces: Vec::new(),
+            access_flags: [0, 0],
+            this_class: [0, 0],
+            super_class: [0, 0],
+            interfaces: &[],
             fields: Vec::new(),
             methods: Vec::new(),
             attributes: Vec::new(),
