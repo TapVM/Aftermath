@@ -967,6 +967,121 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
+                    "RuntimeInvisibleTypeAnnotations" => {
+                        let length = self.u2();
+                        let annotations = self.type_annotation_range(self.to_u2(length));
+
+                        attributes.push(Attributes::RuntimeInvisibleTypeAnnotations(
+                            RuntimeInvisibleTypeAnnotations { annotations },
+                        ))
+                    }
+
+                    "AnnotationDefault" => {
+                        let default_value = self.element_value();
+
+                        attributes.push(Attributes::AnnotationDefault(AnnotationDefault {
+                            default_value,
+                        }))
+                    }
+
+                    "BootstrapMethods" => {
+                        let length = self.u2();
+                        let mut bootstrap_methods = Vec::new();
+
+                        for _ in 0..self.to_u2(length) {
+                            let bootstrap_method_ref = self.u2();
+                            let num_bootstrap_arguments = self.u2();
+                            let bootstrap_arguments =
+                                self.u2_range(self.to_u2(num_bootstrap_arguments).into());
+
+                            bootstrap_methods.push(BootStrapMethodsInner {
+                                bootstrap_method_ref,
+                                bootstrap_arguments,
+                            })
+                        }
+
+                        attributes.push(Attributes::BootstrapMethods(BootStrapMethods {
+                            bootstrap_methods,
+                        }))
+                    }
+
+                    "MethodParameters" => {
+                        let length = self.u1();
+                        let mut parameters = Vec::new();
+
+                        for _ in 0..length {
+                            let name_index = self.u2();
+                            let access_flags = self.u2();
+
+                            parameters.push(MethodParametersInner {
+                                name_index,
+                                access_flags,
+                            })
+                        }
+
+                        attributes.push(Attributes::MethodParameters(MethodParameters {
+                            parameters,
+                        }))
+                    }
+
+                    "ModulePackages" => {
+                        let package_count = self.u2();
+                        let package_index = self.u2_range(self.to_u2(package_count).into());
+
+                        attributes
+                            .push(Attributes::ModulePackages(ModulePackages { package_index }))
+                    }
+
+                    "ModuleMainClass" => {
+                        let main_class_index = self.u2();
+
+                        attributes.push(Attributes::ModuleMainClass(ModuleMainClass {
+                            main_class_index,
+                        }))
+                    }
+
+                    "NestHost" => {
+                        let host_class_index = self.u2();
+
+                        attributes.push(Attributes::NestHost(NestHost { host_class_index }))
+                    }
+
+                    "NestMembers" => {
+                        let number_of_classes = self.u2();
+                        let classes = self.u2_range(self.to_u2(number_of_classes).into());
+                        attributes.push(Attributes::NestMembers(NestMembers { classes }))
+                    }
+
+                    "Record" => {
+                        let count = self.u2();
+                        let mut components = Vec::new();
+
+                        for _ in 0..self.to_u2(count) {
+                            let name_index = self.u2();
+                            let descriptor_index = self.u2();
+                            let attributes_count = self.u2();
+                            let attributes =
+                                self.attributes(self.to_u2(attributes_count).into(), cp)?;
+
+                            components.push(RecordComponentInfo {
+                                name_index,
+                                descriptor_index,
+                                attributes,
+                            })
+                        }
+
+                        attributes.push(Attributes::Record(Record { components }))
+                    }
+
+                    "PermittedSubclasses" => {
+                        let length = self.u2();
+                        let classes = self.u2_range(self.to_u2(length).into());
+
+                        attributes.push(Attributes::PermittedSubclasses(PermittedSubclasses {
+                            classes,
+                        }))
+                    }
+
                     _ => todo!("{} {}", tag, attribute_length),
                 }
             } else {
@@ -977,7 +1092,11 @@ impl<'class> Parser<'class> {
         Ok(attributes)
     }
 
-    pub fn methods(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<MethodInfo>> {
+    pub fn methods(
+        &mut self,
+        length: u16,
+        cp: &Vec<CpNode<'class>>,
+    ) -> Result<Vec<MethodInfo<'class>>> {
         let mut methods = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -997,7 +1116,11 @@ impl<'class> Parser<'class> {
         Ok(methods)
     }
 
-    pub fn fields(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<FieldInfo>> {
+    pub fn fields(
+        &mut self,
+        length: u16,
+        cp: &Vec<CpNode<'class>>,
+    ) -> Result<Vec<FieldInfo<'class>>> {
         let mut fields = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -1048,14 +1171,14 @@ impl<'class> Parser<'class> {
         Ok(ClassFile {
             minor_v,
             major_v,
-            cp: Vec::new(),
-            access_flags: [0, 0],
-            this_class: [0, 0],
-            super_class: [0, 0],
-            interfaces: &[],
-            fields: Vec::new(),
-            methods: Vec::new(),
-            attributes: Vec::new(),
+            cp,
+            access_flags: access_flags,
+            this_class,
+            super_class,
+            interfaces,
+            fields,
+            methods,
+            attributes,
         })
     }
 }
