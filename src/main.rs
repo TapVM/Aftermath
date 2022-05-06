@@ -12,7 +12,7 @@ pub fn black_box<T>(dummy: T) -> T {
 }
 
 fn main() {
-    let file = std::fs::read("/home/gimbles/Desktop/Aftermath/class_basket/large.class").unwrap();
+    let file = std::fs::read("/home/gimbles/Desktop/aftermath/class_basket/large.class").unwrap();
     let start = Instant::now();
     let mut parser = black_box(Parser::new(black_box(&file)));
     let parsed = black_box(parser.parse().unwrap());
