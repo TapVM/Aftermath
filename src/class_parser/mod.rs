@@ -1172,7 +1172,7 @@ impl<'class> Parser<'class> {
             minor_v,
             major_v,
             cp,
-            access_flags: access_flags,
+            access_flags,
             this_class,
             super_class,
             interfaces,
