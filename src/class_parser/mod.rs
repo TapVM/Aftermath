@@ -68,16 +68,16 @@ pub enum Attributes<'class> {
 
 #[derive(Debug)]
 pub enum TargetInfo {
-    TypeParameterTarget,
-    Supertype,
-    TypeParameterBound,
+    TypeParameterTarget(TypeParameterTarget),
+    Supertype(Supertype),
+    TypeParameterBound(TypeParameterBound),
     Empty,
-    FormalParameter,
-    Throws,
-    Localvar,
-    Catch,
-    Offset,
-    TypeArgument,
+    FormalParameter(FormalParameter),
+    Throws(Throws),
+    Localvar(Localvar),
+    Catch(Catch),
+    Offset(Offset),
+    TypeArgument(TypeArgument),
 }
 
 #[derive(Debug)]
@@ -419,6 +419,59 @@ pub struct ClassFile<'class> {
     pub attributes: Vec<Attributes<'class>>,
 }
 
+#[derive(Debug)]
+pub struct TypeParameterTarget {
+    type_parameter_index: U1,
+}
+
+#[derive(Debug)]
+pub struct Supertype {
+    supertype_index: U2,
+}
+
+#[derive(Debug)]
+pub struct TypeParameterBound {
+    type_parameter_index: U1,
+    bound_index: U1,
+}
+
+#[derive(Debug)]
+pub struct FormalParameter {
+    formal_parameter_index: U1,
+}
+
+#[derive(Debug)]
+pub struct Throws {
+    throws_type_index: U1,
+}
+
+#[derive(Debug)]
+pub struct Localvar {
+    table: Vec<LocalvarInner>,
+}
+
+#[derive(Debug)]
+pub struct LocalvarInner {
+    start_pc: U2,
+    length: U2,
+    index: U2,
+}
+
+#[derive(Debug)]
+pub struct Catch {
+    exception_table_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Offset {
+    offset: U2,
+}
+
+#[derive(Debug)]
+pub struct TypeArgument {
+    offset: U2,
+    type_argument_index: U1,
+}
 // -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
@@ -572,18 +625,79 @@ impl<'class> Parser<'class> {
 
     pub fn type_annotation(&mut self) -> TypeAnnotation {
         let target_type = self.u1();
+        let target_info = match target_type {
+            0x00 | 0x01 => {
+                let type_parameter_index = self.u1();
+                TargetInfo::TypeParameterTarget(TypeParameterTarget {
+                    type_parameter_index,
+                })
+            }
+            0x10 => {
+                let supertype_index = self.u2();
+                TargetInfo::Supertype(Supertype { supertype_index })
+            }
+            0x11 | 0x12 => {
+                let type_parameter_index = self.u1();
+                let bound_index = self.u1();
 
-        let target_info: TargetInfo = match target_type {
-            0 => TargetInfo::TypeParameterTarget,
-            1 => TargetInfo::Supertype,
-            2 => TargetInfo::TypeParameterBound,
-            3 => TargetInfo::Empty,
-            4 => TargetInfo::FormalParameter,
-            5 => TargetInfo::Throws,
-            6 => TargetInfo::Localvar,
-            7 => TargetInfo::Catch,
-            8 => TargetInfo::Offset,
-            9 => TargetInfo::TypeArgument,
+                TargetInfo::TypeParameterBound(TypeParameterBound {
+                    type_parameter_index,
+                    bound_index,
+                })
+            }
+            0x13 | 0x14 | 0x15 => TargetInfo::Empty,
+            0x16 => {
+                let formal_parameter_index = self.u1();
+                TargetInfo::FormalParameter(FormalParameter {
+                    formal_parameter_index,
+                })
+            }
+            0x17 => {
+                let throws_type_index = self.u1();
+
+                TargetInfo::Throws(Throws { throws_type_index })
+            }
+            0x40 | 0x41 => {
+                let length = self.u2();
+                let mut table = Vec::new();
+
+                for _ in 0..self.to_u2(length) {
+                    let start_pc = self.u2();
+                    let length = self.u2();
+                    let index = self.u2();
+                    table.push(LocalvarInner {
+                        start_pc,
+                        length,
+                        index,
+                    })
+                }
+
+                TargetInfo::Localvar(Localvar { table })
+            }
+
+            0x42 => {
+                let exception_table_index = self.u2();
+
+                TargetInfo::Catch(Catch {
+                    exception_table_index,
+                })
+            }
+
+            0x43 | 0x44 | 0x45 | 0x46 => {
+                let offset = self.u2();
+
+                TargetInfo::Offset(Offset { offset })
+            }
+
+            0x47 | 0x48 | 0x49 | 0x4A | 0x4B => {
+                let offset = self.u2();
+                let type_argument_index = self.u1();
+
+                TargetInfo::TypeArgument(TypeArgument {
+                    offset,
+                    type_argument_index,
+                })
+            }
             _ => unreachable!(),
         };
 
@@ -644,10 +758,14 @@ impl<'class> Parser<'class> {
             let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
 
             if let CpNode::Utf8(tag) = tag {
-                match *tag {
-                    "ConstantValue" => attributes.push(Attributes::Value(Value {
-                        value_index: self.u2(),
-                    })),
+                match dbg!(*tag) {
+                    "ConstantValue" => {
+                        let value_index = self.u2();
+
+                        dbg!(&cp[self.to_u2(value_index) as usize]);
+
+                        attributes.push(Attributes::Value(Value { value_index }))
+                    }
 
                     "SourceFile" => attributes.push(Attributes::SourceFile(SourceFile {
                         sourcefile_index: self.u2(),
@@ -876,7 +994,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "LocalTypeTable" => {
+                    "LocalVariableTypeTable" => {
                         let length = self.u2();
                         let mut local_variable_type_table =
                             Vec::with_capacity(self.to_u2(length).into());
@@ -906,7 +1024,7 @@ impl<'class> Parser<'class> {
 
                     "Deprecated" => attributes.push(Attributes::Deprecated(Deprecated)),
 
-                    "RuntimeVisibleAnnotation" => {
+                    "RuntimeVisibleAnnotations" => {
                         let length = self.u2();
                         let annotations = self.annotation_range(self.to_u2(length));
 
@@ -964,6 +1082,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeVisibleTypeAnnotations" => {
                         let length = self.u2();
+                        dbg!(length);
                         let annotations = self.type_annotation_range(self.to_u2(length));
 
                         attributes.push(Attributes::RuntimeVisibleTypeAnnotations(
@@ -1147,12 +1266,12 @@ impl<'class> Parser<'class> {
     }
 
     pub fn parse(&mut self) -> Result<ClassFile<'class>> {
+        dbg!(self.bytes.len());
         let magic = self.u4();
 
         if magic != 0xCAFEBABE {
             return Err(ParsingError::Magic);
         }
-
         let buffer = self.u2_range(3);
         let minor_v = buffer[0];
         let major_v = buffer[1];
