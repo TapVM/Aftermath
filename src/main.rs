@@ -1,4 +1,6 @@
 use aftermath::class_parser::Parser;
+use color_eyre::Result;
+use std::ffi::OsStr;
 use std::thread;
 use std::time::{Duration, Instant};
 mod class_parser;
@@ -11,14 +13,20 @@ pub fn black_box<T>(dummy: T) -> T {
     }
 }
 
-fn main() {
-    let file = std::fs::read("/home/gimbles/Desktop/aftermath/class_basket/large.class").unwrap();
-    let start = Instant::now();
-    let mut parser = black_box(Parser::new(black_box(&file)));
-    let parsed = black_box(parser.parse().unwrap());
-    dbg!(start.elapsed());
-    thread::sleep(Duration::from_secs(15));
-    dbg!(parsed);
+fn main() -> Result<()> {
+    color_eyre::install()?;
+
+    std::fs::read_dir("./class_basket")?
+        .map(|x| x.as_ref().unwrap().path())
+        .filter(|x| x.extension() == Some(OsStr::new("class")))
+        .for_each(|x| {
+            println!("NEW FILE -> {:?}", &x);
+            let data = std::fs::read(x).unwrap();
+            let mut parser = Parser::new(&data);
+            parser.parse().unwrap();
+        });
+
+    Ok(())
 }
 
 #[cfg(tests)]

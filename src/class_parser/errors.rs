@@ -8,7 +8,10 @@ use super::{U2, U4};
 
 #[derive(Error, Debug)]
 pub enum ParsingError {
-    #[error("Error (Metadata) -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨\nHelp ~> Are you *sure* that this is a JVM class file?")]
+    #[error(
+        "Error (Metadata) -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨
+        Help ~> Are you *sure* that this is a JVM class file?"
+    )]
     Magic,
     #[error("Error (Metadata) -> If the major version is 56 or above, the minor version can only be 0 or 65535.")]
     MinorVersion,
