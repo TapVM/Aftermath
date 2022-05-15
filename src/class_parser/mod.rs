@@ -36,7 +36,7 @@ pub enum CpNode<'class> {
 pub enum Attributes<'class> {
     Value(Value),
     Code(AttrCode<'class>),
-    StackMapTable(StackMapTable<'class>),
+    StackMapTable(StackMapTable),
     Exceptions(Exceptions<'class>),
     InnerClass(InnerClass),
     EnclosingMethod(EnclosingMethod),
@@ -89,7 +89,123 @@ pub enum ElementValue {
     ArrayValue(ArrayValue),
 }
 
+#[derive(Debug)]
+pub enum StackMapFrame {
+    SameFrame(SameFrame),
+    SameLocals1StackItemFrame(SameLocals1StackItemFrame),
+    SameLocals1StackItemFrameExtended(SameLocals1StackItemFrameExtended),
+    ChopFrame(ChopFrame),
+    SameFrameExtended(SameFrameExtended),
+    AppendFrame(AppendFrame),
+    FullFrame(FullFrame),
+}
+
+#[derive(Debug)]
+pub enum VerificationTypeInfo {
+    TopVariableInfo(TopVariableInfo),
+    IntegerVariableInfo(IntegerVariableInfo),
+    FloatVariableInfo(FloatVariableInfo),
+    DoubleVariableInfo(DoubleVariableInfo),
+    LongVariableInfo(LongVariableInfo),
+    NullVariableInfo(NullVariableInfo),
+    UninitializedThisVariableInfo(UninitializedThisVariableInfo),
+    ObjectVariableInfo(ObjectVariableInfo),
+    UninitializedVariableInfo(UninitializedVariableInfo),
+}
+
 // -------------------------------------------------------------------------------------------------
+
+#[derive(Debug)]
+pub struct SameFrame {
+    frame_type: u8,
+}
+
+#[derive(Debug)]
+pub struct SameLocals1StackItemFrame {
+    frame_type: u8,
+    stack: VerificationTypeInfo,
+}
+
+#[derive(Debug)]
+pub struct SameLocals1StackItemFrameExtended {
+    frame_type: u8,
+    offset_delta: U2,
+    stack: VerificationTypeInfo,
+}
+
+#[derive(Debug)]
+pub struct ChopFrame {
+    frame_type: u8,
+    offset_delta: U2,
+}
+
+#[derive(Debug)]
+pub struct SameFrameExtended {
+    frame_type: u8,
+    offset_delta: U2,
+}
+
+#[derive(Debug)]
+pub struct AppendFrame {
+    frame_type: u8,
+    offset_delta: U2,
+    locals: Vec<VerificationTypeInfo>,
+}
+
+#[derive(Debug)]
+pub struct FullFrame {
+    frame_type: u8,
+    offset_delta: [u8; 2],
+    locals: Vec<VerificationTypeInfo>,
+    stack: Vec<VerificationTypeInfo>,
+}
+
+#[derive(Debug)]
+pub struct TopVariableInfo {
+    tag: u8,
+}
+
+#[derive(Debug)]
+pub struct IntegerVariableInfo {
+    tag: u8,
+}
+
+#[derive(Debug)]
+pub struct FloatVariableInfo {
+    tag: u8,
+}
+
+#[derive(Debug)]
+pub struct DoubleVariableInfo {
+    tag: u8,
+}
+
+#[derive(Debug)]
+pub struct LongVariableInfo {
+    tag: u8,
+}
+
+#[derive(Debug)]
+pub struct NullVariableInfo {
+    tag: u8,
+}
+
+#[derive(Debug)]
+pub struct UninitializedThisVariableInfo {
+    tag: u8,
+}
+
+#[derive(Debug)]
+pub struct ObjectVariableInfo {
+    tag: u8,
+    cp_index: U2,
+}
+
+#[derive(Debug)]
+pub struct UninitializedVariableInfo {
+    tag: u8,
+    offset: U2,
+}
 
 #[derive(Debug)]
 pub struct PermittedSubclasses<'class> {
@@ -364,8 +480,8 @@ pub struct InnerClass {
 }
 
 #[derive(Debug)]
-pub struct StackMapTable<'class> {
-    entries: &'class [U1],
+pub struct StackMapTable {
+    entries: Vec<StackMapFrame>,
 }
 
 #[derive(Debug)]
@@ -484,23 +600,23 @@ impl<'class> Parser<'class> {
         Self { bytes }
     }
 
-    pub fn u1(&mut self) -> U1 {
+    fn u1(&mut self) -> U1 {
         let output = self.bytes[0];
         self.bytes = &self.bytes[1..];
         output
     }
 
-    pub fn u1_range(&mut self, length: U4) -> &'class [U1] {
+    fn u1_range(&mut self, length: U4) -> &'class [U1] {
         let output = &self.bytes[0..length as usize];
         self.bytes = &self.bytes[length as usize..];
         output
     }
 
-    pub fn u2(&mut self) -> U2 {
+    fn u2(&mut self) -> U2 {
         [self.u1(), self.u1()]
     }
 
-    pub fn u2_range(&mut self, length: U4) -> &'class [U2] {
+    fn u2_range(&mut self, length: U4) -> &'class [U2] {
         unsafe {
             core::slice::from_raw_parts(
                 self.u1_range(length * 2).as_ptr().cast(),
@@ -509,15 +625,15 @@ impl<'class> Parser<'class> {
         }
     }
 
-    pub fn to_u2(&self, data: U2) -> u16 {
+    fn to_u2(&self, data: U2) -> u16 {
         u16::from_be_bytes(data)
     }
 
-    pub fn u4(&mut self) -> U4 {
+    fn u4(&mut self) -> U4 {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
-    pub fn element_value(&mut self) -> ElementValue {
+    fn element_value(&mut self) -> ElementValue {
         let tag = self.u1();
 
         match tag as char {
@@ -556,7 +672,7 @@ impl<'class> Parser<'class> {
         }
     }
 
-    pub fn annotation(&mut self) -> Annotation {
+    fn annotation(&mut self) -> Annotation {
         let type_index = self.u2();
         let num_element_value_pairs = self.u2();
         let mut element_value_pairs =
@@ -578,7 +694,7 @@ impl<'class> Parser<'class> {
         }
     }
 
-    pub fn annotation_range(&mut self, length: u16) -> Vec<Annotation> {
+    fn annotation_range(&mut self, length: u16) -> Vec<Annotation> {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
@@ -588,7 +704,7 @@ impl<'class> Parser<'class> {
         annotations
     }
 
-    pub fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>> {
+    fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>> {
         let mut pool = Vec::with_capacity(length as usize - 1);
         for _ in 0..(length - 1_u16) {
             let tag = self.u1();
@@ -739,7 +855,7 @@ impl<'class> Parser<'class> {
         }
     }
 
-    pub fn type_annotation_range(&mut self, length: u16) -> Vec<TypeAnnotation> {
+    fn type_annotation_range(&mut self, length: u16) -> Vec<TypeAnnotation> {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
@@ -749,7 +865,106 @@ impl<'class> Parser<'class> {
         annotations
     }
 
-    pub fn attributes(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
+    fn stackmapframe(&mut self) -> StackMapFrame {
+        let frame_type = self.u1();
+
+        match frame_type {
+            0..=63 => StackMapFrame::SameFrame(SameFrame { frame_type }),
+            64..=127 => StackMapFrame::SameLocals1StackItemFrame(SameLocals1StackItemFrame {
+                frame_type,
+                stack: self.verification_type_info(),
+            }),
+            247 => {
+                let offset_delta = self.u2();
+                let stack = self.verification_type_info();
+
+                StackMapFrame::SameLocals1StackItemFrameExtended(
+                    SameLocals1StackItemFrameExtended {
+                        frame_type,
+                        offset_delta,
+                        stack,
+                    },
+                )
+            }
+            248..=250 => StackMapFrame::ChopFrame(ChopFrame {
+                frame_type,
+                offset_delta: self.u2(),
+            }),
+            251 => StackMapFrame::SameFrameExtended(SameFrameExtended {
+                frame_type,
+                offset_delta: self.u2(),
+            }),
+            252..=254 => {
+                let offset_delta = self.u2();
+                let length = frame_type - 251;
+                let mut locals = Vec::with_capacity(length as usize);
+
+                for _ in 0..length {
+                    locals.push(self.verification_type_info());
+                }
+
+                StackMapFrame::AppendFrame(AppendFrame {
+                    frame_type,
+                    offset_delta,
+                    locals,
+                })
+            }
+            255 => {
+                let offset_delta = self.u2();
+
+                let length = self.u2();
+                let mut locals = Vec::with_capacity(self.to_u2(length) as usize);
+
+                for _ in 0..self.to_u2(length) {
+                    locals.push(self.verification_type_info());
+                }
+
+                let length = self.u2();
+                let mut stack = Vec::with_capacity(self.to_u2(length) as usize);
+
+                for _ in 0..self.to_u2(length) {
+                    stack.push(self.verification_type_info());
+                }
+
+                StackMapFrame::FullFrame(FullFrame {
+                    frame_type,
+                    offset_delta,
+                    locals,
+                    stack,
+                })
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn verification_type_info(&mut self) -> VerificationTypeInfo {
+        let tag = self.u1();
+
+        match tag {
+            0 => VerificationTypeInfo::TopVariableInfo(TopVariableInfo { tag }),
+            1 => VerificationTypeInfo::IntegerVariableInfo(IntegerVariableInfo { tag }),
+            2 => VerificationTypeInfo::FloatVariableInfo(FloatVariableInfo { tag }),
+            3 => VerificationTypeInfo::DoubleVariableInfo(DoubleVariableInfo { tag }),
+            4 => VerificationTypeInfo::LongVariableInfo(LongVariableInfo { tag }),
+            5 => VerificationTypeInfo::NullVariableInfo(NullVariableInfo { tag }),
+            6 => {
+                VerificationTypeInfo::UninitializedThisVariableInfo(UninitializedThisVariableInfo {
+                    tag,
+                })
+            }
+            7 => VerificationTypeInfo::ObjectVariableInfo(ObjectVariableInfo {
+                tag,
+                cp_index: self.u2(),
+            }),
+            8 => VerificationTypeInfo::UninitializedVariableInfo(UninitializedVariableInfo {
+                tag,
+                offset: self.u2(),
+            }),
+            _ => unreachable!(),
+        }
+    }
+
+    fn attributes(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
         let mut attributes = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -910,7 +1125,11 @@ impl<'class> Parser<'class> {
 
                     "StackMapTable" => {
                         let number_of_entries = self.u2();
-                        let entries = self.u1_range(self.to_u2(number_of_entries).into());
+                        let mut entries = Vec::new();
+
+                        for _ in 0..self.to_u2(number_of_entries) {
+                            entries.push(self.stackmapframe());
+                        }
 
                         attributes.push(Attributes::StackMapTable(StackMapTable { entries }))
                     }
@@ -1206,7 +1425,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    _ => todo!("{} {}", tag, attribute_length),
+                    _ => unimplemented!("{} {}", tag, attribute_length),
                 }
             } else {
                 return Err(ParsingError::AttributeNotUtf8);
@@ -1216,7 +1435,7 @@ impl<'class> Parser<'class> {
         Ok(attributes)
     }
 
-    pub fn methods(
+    fn methods(
         &mut self,
         length: u16,
         cp: &Vec<CpNode<'class>>,
@@ -1240,11 +1459,7 @@ impl<'class> Parser<'class> {
         Ok(methods)
     }
 
-    pub fn fields(
-        &mut self,
-        length: u16,
-        cp: &Vec<CpNode<'class>>,
-    ) -> Result<Vec<FieldInfo<'class>>> {
+    fn fields(&mut self, length: u16, cp: &Vec<CpNode<'class>>) -> Result<Vec<FieldInfo<'class>>> {
         let mut fields = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -1266,24 +1481,22 @@ impl<'class> Parser<'class> {
     }
 
     pub fn parse(&mut self) -> Result<ClassFile<'class>> {
-        dbg!(self.bytes.len());
         let magic = self.u4();
 
         if magic != 0xCAFEBABE {
             return Err(ParsingError::Magic);
         }
-        let buffer = self.u2_range(3);
-        let minor_v = buffer[0];
-        let major_v = buffer[1];
-        let cp_count = buffer[2];
+
+        let minor_v = self.u2();
+        let major_v = self.u2();
+        let cp_count = self.u2();
         let cp = self.cp(self.to_u2(cp_count))?;
 
-        let buffer = self.u2_range(4);
-        let access_flags = buffer[0];
-        let this_class = buffer[1];
-        let super_class = buffer[2];
+        let access_flags = self.u2();
+        let this_class = self.u2();
+        let super_class = self.u2();
+        let interfaces_count = self.u2();
 
-        let interfaces_count = buffer[3];
         let interfaces = self.u2_range(self.to_u2(interfaces_count) as u32);
         let fields_count = self.u2();
         let fields = self.fields(self.to_u2(fields_count), &cp)?;

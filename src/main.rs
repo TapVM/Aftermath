@@ -18,9 +18,11 @@ fn main() -> Result<()> {
 
     std::fs::read_dir("./class_basket")?
         .map(|x| x.as_ref().unwrap().path())
-        .filter(|x| x.extension() == Some(OsStr::new("class")))
+        .filter(|x| {
+            x.extension() == Some(OsStr::new("class"))
+                && dbg!(x.file_name()) != Some(OsStr::new("intentional_invalid_magic.class"))
+        })
         .for_each(|x| {
-            println!("NEW FILE -> {:?}", &x);
             let data = std::fs::read(x).unwrap();
             let mut parser = Parser::new(&data);
             parser.parse().unwrap();
