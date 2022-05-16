@@ -688,6 +688,7 @@ pub struct Package {
 pub struct Parser<'class> {
     pub bytes: &'class [U1],
     index: usize,
+    // original: &'class [U1],
 }
 
 impl<'class> Parser<'class> {
@@ -805,7 +806,16 @@ impl<'class> Parser<'class> {
         for _ in 0..length - 1 {
             let tag = self.u1();
 
+            println!("Current tag -> {}", tag);
+
             match tag {
+                1 => {
+                    let length = self.u2();
+                    let bytes = self.u1_range(self.to_u2(length).into());
+
+                    cp.push(CpNode::Utf8(Utf8 { bytes }))
+                }
+
                 7 => {
                     let name_index = self.u2();
 
@@ -886,13 +896,6 @@ impl<'class> Parser<'class> {
                         name_index,
                         descriptor_index,
                     }))
-                }
-
-                1 => {
-                    let length = self.u2();
-                    let bytes = self.u1_range(self.to_u2(length).into());
-
-                    cp.push(CpNode::Utf8(Utf8 { bytes }))
                 }
 
                 15 => {
@@ -1703,6 +1706,7 @@ impl<'class> Parser<'class> {
         dbg!(minor_v, major_v);
         let cp_count = self.u2();
         dbg!(self.to_u2(cp_count));
+        println!("{:?}", cp_count);
         let cp = self.cp(self.to_u2(cp_count));
 
         let access_flags = self.u2();
