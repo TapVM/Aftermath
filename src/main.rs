@@ -1,8 +1,6 @@
 use aftermath::class_parser::Parser;
 use color_eyre::Result;
 use std::ffi::OsStr;
-use std::thread;
-use std::time::{Duration, Instant};
 mod class_parser;
 
 pub fn black_box<T>(dummy: T) -> T {

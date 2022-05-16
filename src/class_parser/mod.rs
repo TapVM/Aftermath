@@ -2,7 +2,6 @@
 
 mod errors;
 
-use color_eyre::owo_colors::DynColor;
 pub use errors::ParsingError;
 
 type U1 = u8;
