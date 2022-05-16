@@ -14,17 +14,23 @@ pub fn black_box<T>(dummy: T) -> T {
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    std::fs::read_dir("./class_basket")?
-        .map(|x| x.as_ref().unwrap().path())
-        .filter(|x| {
-            x.extension() == Some(OsStr::new("class"))
-                && dbg!(x.file_name()) != Some(OsStr::new("intentional_invalid_magic.class"))
-        })
-        .for_each(|x| {
-            let data = std::fs::read(x).unwrap();
-            let mut parser = Parser::new(&data);
-            parser.parse().unwrap();
-        });
+    // std::fs::read_dir("./class_basket")?
+    //     .map(|x| x.as_ref().unwrap().path())
+    //     .filter(|x| {
+    //         x.extension() == Some(OsStr::new("class"))
+    //             && dbg!(x.file_name()) != Some(OsStr::new("intentional_invalid_magic.class"))
+    //     })
+    //     .for_each(|x| {
+    //         let data = std::fs::read(x).unwrap();
+    //         let mut parser = Parser::new(&data);
+    //         parser.parse().unwrap();
+    //     });
+
+    let mut parser = Parser::new(include_bytes!(
+        "/var/home/gimbles/Desktop/Aftermath/class_basket/UsingToStringOrdering.class"
+    ));
+
+    parser.parse()?;
 
     Ok(())
 }
