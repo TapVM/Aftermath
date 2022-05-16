@@ -2,6 +2,7 @@
 
 mod errors;
 
+use color_eyre::owo_colors::DynColor;
 pub use errors::ParsingError;
 
 type U1 = u8;
@@ -13,23 +14,23 @@ type Result<T, E = ParsingError> = core::result::Result<T, E>;
 
 #[derive(Debug)]
 pub enum CpNode<'class> {
-    Class(U2),
-    String(U2),
-    MethodType(U2),
-    Module(U2),
-    Package(U2),
-    Integer(U4),
-    Float(U4),
-    Dynamic(U2, U2),
-    NameAndType(U2, U2),
-    InvokeDynamic(U2, U2),
-    FieldRef(U2, U2),
-    MethodRef(U2, U2),
-    InterfaceMethodRef(U2, U2),
-    Long(U4, U4),
-    Double(U4, U4),
-    MethodHandle(U1, U2),
-    Utf8(&'class str),
+    Class(Class),
+    String(String),
+    MethodType(MethodType),
+    Module(ModuleCp),
+    Package(Package),
+    Integer(Integer),
+    Float(Float),
+    Dynamic(Dynamic),
+    NameAndType(NameAndType),
+    InvokeDynamic(InvokeDynamic),
+    FieldRef(Fieldref),
+    MethodRef(Methodref),
+    InterfaceMethodRef(InterfaceMethodref),
+    Long(Long),
+    Double(Double),
+    MethodHandle(MethodHandle),
+    Utf8(Utf8<'class>),
 }
 
 #[derive(Debug)]
@@ -588,27 +589,122 @@ pub struct TypeArgument {
     offset: U2,
     type_argument_index: U1,
 }
+
+#[derive(Debug)]
+pub struct Class {
+    name_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Fieldref {
+    class_index: U2,
+    name_and_type_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Methodref {
+    class_index: U2,
+    name_and_type_index: U2,
+}
+
+#[derive(Debug)]
+pub struct InterfaceMethodref {
+    class_index: U2,
+    name_and_type_index: U2,
+}
+
+#[derive(Debug)]
+pub struct String {
+    string_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Integer {
+    bytes: U4,
+}
+
+#[derive(Debug)]
+pub struct Float {
+    bytes: U4,
+}
+
+#[derive(Debug)]
+pub struct Long {
+    high_bytes: U4,
+    low_bytes: U4,
+}
+
+#[derive(Debug)]
+pub struct Double {
+    high_bytes: U4,
+    low_bytes: U4,
+}
+
+#[derive(Debug)]
+pub struct NameAndType {
+    name_index: U2,
+    descriptor_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Utf8<'class> {
+    bytes: &'class [u8],
+}
+
+#[derive(Debug)]
+pub struct MethodHandle {
+    reference_kind: u8,
+    reference_index: U2,
+}
+
+#[derive(Debug)]
+pub struct MethodType {
+    descriptor_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Dynamic {
+    bootstrap_method_attr_index: U2,
+    name_and_type_index: U2,
+}
+
+#[derive(Debug)]
+pub struct InvokeDynamic {
+    bootstrap_method_attr_index: U2,
+    name_and_type_index: U2,
+}
+
+#[derive(Debug)]
+pub struct ModuleCp {
+    name_index: U2,
+}
+
+#[derive(Debug)]
+pub struct Package {
+    name_index: U2,
+}
 // -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
 pub struct Parser<'class> {
     pub bytes: &'class [U1],
+    index: usize,
 }
 
 impl<'class> Parser<'class> {
     pub fn new(bytes: &'class [u8]) -> Self {
-        Self { bytes }
+        Self { bytes, index: 0 }
     }
 
     fn u1(&mut self) -> U1 {
-        let output = self.bytes[0];
-        self.bytes = &self.bytes[1..];
+        let output = self.bytes[self.index];
+        self.index += 1;
         output
     }
 
     fn u1_range(&mut self, length: U4) -> &'class [U1] {
-        let output = &self.bytes[0..length as usize];
-        self.bytes = &self.bytes[length as usize..];
+        let output = &self.bytes[self.index..self.index + length as usize];
+        self.index += length as usize;
         output
     }
 
@@ -704,39 +800,155 @@ impl<'class> Parser<'class> {
         annotations
     }
 
-    fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>> {
-        let mut pool = Vec::with_capacity(length as usize - 1);
-        for _ in 0..(length - 1_u16) {
+    fn cp(&mut self, length: u16) -> Vec<CpNode<'class>> {
+        let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
+
+        for _ in 0..length - 1 {
             let tag = self.u1();
 
             match tag {
-                7 => pool.push(CpNode::Class(self.u2())),
-                9 => pool.push(CpNode::FieldRef(self.u2(), self.u2())),
-                10 => pool.push(CpNode::FieldRef(self.u2(), self.u2())),
-                11 => pool.push(CpNode::MethodRef(self.u2(), self.u2())),
-                8 => pool.push(CpNode::String(self.u2())),
-                3 => pool.push(CpNode::Integer(self.u4())),
-                5 => pool.push(CpNode::Long(self.u4(), self.u4())),
-                6 => pool.push(CpNode::Double(self.u4(), self.u4())),
-                12 => pool.push(CpNode::NameAndType(self.u2(), self.u2())),
-                1 => {
-                    let data = self.u2();
-                    let length = self.to_u2(data);
-                    pool.push(CpNode::Utf8(std::str::from_utf8(
-                        self.u1_range(length.into()),
-                    )?));
+                7 => {
+                    let name_index = self.u2();
+
+                    cp.push(CpNode::Class(Class { name_index }))
                 }
-                15 => pool.push(CpNode::MethodHandle(self.u1(), self.u2())),
-                16 => pool.push(CpNode::MethodType(self.u2())),
-                17 => pool.push(CpNode::Dynamic(self.u2(), self.u2())),
-                18 => pool.push(CpNode::InvokeDynamic(self.u2(), self.u2())),
-                19 => pool.push(CpNode::Module(self.u2())),
-                20 => pool.push(CpNode::Package(self.u2())),
-                _ => return Err(ParsingError::ConstantPoolTag(tag)),
+
+                9 => {
+                    let class_index = self.u2();
+                    let name_and_type_index = self.u2();
+
+                    cp.push(CpNode::FieldRef(Fieldref {
+                        class_index,
+                        name_and_type_index,
+                    }))
+                }
+
+                10 => {
+                    let class_index = self.u2();
+                    let name_and_type_index = self.u2();
+
+                    cp.push(CpNode::MethodRef(Methodref {
+                        class_index,
+                        name_and_type_index,
+                    }))
+                }
+
+                11 => {
+                    let class_index = self.u2();
+                    let name_and_type_index = self.u2();
+
+                    cp.push(CpNode::InterfaceMethodRef(InterfaceMethodref {
+                        class_index,
+                        name_and_type_index,
+                    }))
+                }
+
+                8 => {
+                    let string_index = self.u2();
+
+                    cp.push(CpNode::String(String { string_index }));
+                }
+
+                3 => {
+                    let bytes = self.u4();
+                    cp.push(CpNode::Integer(Integer { bytes }));
+                }
+
+                4 => {
+                    let bytes = self.u4();
+                    cp.push(CpNode::Float(Float { bytes }));
+                }
+
+                5 => {
+                    let high_bytes = self.u4();
+                    let low_bytes = self.u4();
+
+                    cp.push(CpNode::Long(Long {
+                        high_bytes,
+                        low_bytes,
+                    }));
+                }
+
+                6 => {
+                    let high_bytes = self.u4();
+                    let low_bytes = self.u4();
+
+                    cp.push(CpNode::Double(Double {
+                        high_bytes,
+                        low_bytes,
+                    }));
+                }
+
+                12 => {
+                    let name_index = self.u2();
+                    let descriptor_index = self.u2();
+
+                    cp.push(CpNode::NameAndType(NameAndType {
+                        name_index,
+                        descriptor_index,
+                    }))
+                }
+
+                1 => {
+                    let length = self.u2();
+                    let bytes = self.u1_range(self.to_u2(length).into());
+
+                    cp.push(CpNode::Utf8(Utf8 { bytes }))
+                }
+
+                15 => {
+                    let reference_kind = self.u1();
+                    let reference_index = self.u2();
+
+                    cp.push(CpNode::MethodHandle(MethodHandle {
+                        reference_kind,
+                        reference_index,
+                    }))
+                }
+
+                16 => {
+                    let descriptor_index = self.u2();
+
+                    cp.push(CpNode::MethodType(MethodType { descriptor_index }))
+                }
+
+                17 => {
+                    let bootstrap_method_attr_index = self.u2();
+                    let name_and_type_index = self.u2();
+
+                    cp.push(CpNode::Dynamic(Dynamic {
+                        bootstrap_method_attr_index,
+                        name_and_type_index,
+                    }));
+                }
+
+                18 => {
+                    let bootstrap_method_attr_index = self.u2();
+                    let name_and_type_index = self.u2();
+
+                    cp.push(CpNode::InvokeDynamic(InvokeDynamic {
+                        bootstrap_method_attr_index,
+                        name_and_type_index,
+                    }));
+                }
+
+                19 => {
+                    let name_index = self.u2();
+
+                    cp.push(CpNode::Module(ModuleCp { name_index }))
+                }
+
+                20 => {
+                    let name_index = self.u2();
+
+                    cp.push(CpNode::Package(Package { name_index }))
+                }
+
+                _ => unreachable!(),
             }
         }
 
-        Ok(pool)
+        cp
     }
 
     pub fn type_annotation(&mut self) -> TypeAnnotation {
@@ -973,7 +1185,7 @@ impl<'class> Parser<'class> {
             let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
 
             if let CpNode::Utf8(tag) = tag {
-                match dbg!(*tag) {
+                match std::str::from_utf8(tag.bytes)? {
                     "ConstantValue" => {
                         let value_index = self.u2();
 
@@ -1425,7 +1637,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    _ => unimplemented!("{} {}", tag, attribute_length),
+                    _ => unimplemented!("{:?} {}", tag, attribute_length),
                 }
             } else {
                 return Err(ParsingError::AttributeNotUtf8);
@@ -1489,8 +1701,10 @@ impl<'class> Parser<'class> {
 
         let minor_v = self.u2();
         let major_v = self.u2();
+        dbg!(minor_v, major_v);
         let cp_count = self.u2();
-        let cp = self.cp(self.to_u2(cp_count))?;
+        dbg!(self.to_u2(cp_count));
+        let cp = self.cp(self.to_u2(cp_count));
 
         let access_flags = self.u2();
         let this_class = self.u2();
