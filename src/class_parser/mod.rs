@@ -944,7 +944,7 @@ impl<'class> Parser<'class> {
                     cp.push(CpNode::Package(Package { name_index }))
                 }
 
-                _ => unreachable!(),
+                _ => unreachable!("Constant Pool -> {}", tag),
             }
         }
 
