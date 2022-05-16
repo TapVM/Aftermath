@@ -6,7 +6,7 @@ Welcome to the source, my friend!
 Aftermath is a high-performance JVM for the TapVM framework written in [the Rust programming language](https://rust-lang.org).
 
 ## How do I install it?
-You can install the JDK/JRE builds of OpenJDK using the Aftermath JVM from [here]()
+You can install the JDK/JRE builds of OpenJDK using the Aftermath JVM from [here](https://github.com/tapvm/aftermath)
 <!--- TODO --->
 
 ## Ma! the numbers say it!
