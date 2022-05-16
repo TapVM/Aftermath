@@ -14,7 +14,7 @@ type Result<T, E = ParsingError> = core::result::Result<T, E>;
 #[derive(Debug)]
 pub enum CpNode<'class> {
     Class(Class),
-    String(String),
+    String(StringCp),
     MethodType(MethodType),
     Module(ModuleCp),
     Package(Package),
@@ -613,7 +613,7 @@ pub struct InterfaceMethodref {
 }
 
 #[derive(Debug)]
-pub struct String {
+pub struct StringCp {
     string_index: U2,
 }
 
@@ -802,8 +802,8 @@ impl<'class> Parser<'class> {
 
     fn cp(&mut self, length: u16) -> Vec<CpNode<'class>> {
         let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
-
-        for _ in 0..length - 1 {
+        for cpi in 0..length - 1 {
+            dbg!(cpi);
             let tag = self.u1();
 
             println!("Current tag -> {}", tag);
@@ -812,7 +812,7 @@ impl<'class> Parser<'class> {
                 1 => {
                     let length = self.u2();
                     let bytes = self.u1_range(self.to_u2(length).into());
-
+                    dbg!(std::str::from_utf8(&bytes).unwrap());
                     cp.push(CpNode::Utf8(Utf8 { bytes }))
                 }
 
@@ -855,7 +855,7 @@ impl<'class> Parser<'class> {
                 8 => {
                     let string_index = self.u2();
 
-                    cp.push(CpNode::String(String { string_index }));
+                    cp.push(CpNode::String(StringCp { string_index }));
                 }
 
                 3 => {
@@ -1191,8 +1191,6 @@ impl<'class> Parser<'class> {
                     "ConstantValue" => {
                         let value_index = self.u2();
 
-                        dbg!(&cp[self.to_u2(value_index) as usize]);
-
                         attributes.push(Attributes::Value(Value { value_index }))
                     }
 
@@ -1515,7 +1513,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeVisibleTypeAnnotations" => {
                         let length = self.u2();
-                        dbg!(length);
+
                         let annotations = self.type_annotation_range(self.to_u2(length));
 
                         attributes.push(Attributes::RuntimeVisibleTypeAnnotations(
@@ -1703,10 +1701,8 @@ impl<'class> Parser<'class> {
 
         let minor_v = self.u2();
         let major_v = self.u2();
-        dbg!(minor_v, major_v);
         let cp_count = self.u2();
-        dbg!(self.to_u2(cp_count));
-        println!("{:?}", cp_count);
+        println!("Cp Count -> {}", self.to_u2(cp_count));
         let cp = self.cp(self.to_u2(cp_count));
 
         let access_flags = self.u2();
