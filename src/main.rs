@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         "/var/home/gimbles/Desktop/Aftermath/class_basket/hello_world.class"
     ));
 
-    parser.parse()?;
+    dbg!(parser.parse()?);
 
     Ok(())
 }
