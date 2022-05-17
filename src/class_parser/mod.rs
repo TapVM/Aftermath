@@ -816,8 +816,6 @@ impl<'class> Parser<'class> {
         while cp.len() + 1 < length as usize {
             let tag = self.u1();
 
-            println!("Current tag -> {}", tag);
-
             match tag {
                 1 => {
                     let length = self.u2();
