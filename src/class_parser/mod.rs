@@ -802,7 +802,7 @@ impl<'class> Parser<'class> {
 
     fn cp(&mut self, length: u16) -> Vec<CpNode<'class>> {
         let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
-        for cpi in 1..length - 1 {
+        for cpi in 0..length - 1 {
             dbg!(cpi);
             let tag = self.u1();
 
