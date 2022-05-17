@@ -2,12 +2,23 @@
 
 mod errors;
 
+use std::fmt::Debug;
+
 pub use errors::ParsingError;
 
 type U1 = u8;
-type U2 = [u8; 2];
 type U4 = u32;
 type Result<T, E = ParsingError> = core::result::Result<T, E>;
+
+#[derive(Copy, Clone)]
+#[repr(transparent)]
+pub struct U2([u8; 2]);
+
+impl Debug for U2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", u16::from_be_bytes(self.0))
+    }
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -156,7 +167,7 @@ pub struct AppendFrame {
 #[derive(Debug)]
 pub struct FullFrame {
     frame_type: u8,
-    offset_delta: [u8; 2],
+    offset_delta: U2,
     locals: Vec<VerificationTypeInfo>,
     stack: Vec<VerificationTypeInfo>,
 }
@@ -648,7 +659,7 @@ pub struct NameAndType {
 
 #[derive(Debug)]
 pub struct Utf8<'class> {
-    bytes: &'class [u8],
+    bytes: &'class str,
 }
 
 #[derive(Debug)]
@@ -708,7 +719,7 @@ impl<'class> Parser<'class> {
     }
 
     fn u2(&mut self) -> U2 {
-        [self.u1(), self.u1()]
+        U2([self.u1(), self.u1()])
     }
 
     fn u2_range(&mut self, length: U4) -> &'class [U2] {
@@ -721,7 +732,7 @@ impl<'class> Parser<'class> {
     }
 
     fn to_u2(&self, data: U2) -> u16 {
-        u16::from_be_bytes(data)
+        u16::from_be_bytes(data.0)
     }
 
     fn u4(&mut self) -> U4 {
@@ -803,7 +814,6 @@ impl<'class> Parser<'class> {
         let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
 
         while cp.len() + 1 < length as usize {
-            dbg!(cp.len() + 1);
             let tag = self.u1();
 
             println!("Current tag -> {}", tag);
@@ -812,8 +822,9 @@ impl<'class> Parser<'class> {
                 1 => {
                     let length = self.u2();
                     let bytes = self.u1_range(self.to_u2(length).into());
-                    dbg!(std::str::from_utf8(&bytes).unwrap());
-                    cp.push(CpNode::Utf8(Utf8 { bytes }))
+                    cp.push(CpNode::Utf8(Utf8 {
+                        bytes: std::str::from_utf8(&bytes).unwrap(),
+                    }))
                 }
 
                 7 => {
@@ -1191,7 +1202,7 @@ impl<'class> Parser<'class> {
             let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
 
             if let CpNode::Utf8(tag) = tag {
-                match std::str::from_utf8(tag.bytes)? {
+                match tag.bytes {
                     "ConstantValue" => {
                         let value_index = self.u2();
 
@@ -1705,21 +1716,23 @@ impl<'class> Parser<'class> {
 
         let minor_v = self.u2();
         let major_v = self.u2();
+
         let cp_count = self.u2();
-        println!("Cp Count -> {}", self.to_u2(cp_count));
         let cp = self.cp(self.to_u2(cp_count));
 
         let access_flags = self.u2();
-        println!("Access flags -> {:X}", self.to_u2(access_flags));
         let this_class = self.u2();
         let super_class = self.u2();
-        let interfaces_count = self.u2();
 
+        let interfaces_count = self.u2();
         let interfaces = self.u2_range(self.to_u2(interfaces_count) as u32);
+
         let fields_count = self.u2();
         let fields = self.fields(self.to_u2(fields_count), &cp)?;
+
         let methods_count = self.u2();
         let methods = self.methods(self.to_u2(methods_count), &cp)?;
+
         let attributes_count = self.u2();
         let attributes = self.attributes(self.to_u2(attributes_count), &cp)?;
 
