@@ -774,7 +774,7 @@ impl<'class> Parser<'class> {
                 })
             }
 
-            _ => unreachable!(),
+            _ => unreachable!("{}", tag as char),
         }
     }
 
@@ -1194,7 +1194,7 @@ impl<'class> Parser<'class> {
     fn attributes(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
         let mut attributes = Vec::with_capacity(length as usize);
 
-        for _ in 0..length {
+        while attributes.len() < length as usize {
             let attribute_name_index = self.u2();
             let attribute_length = self.u4();
             let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
@@ -1477,7 +1477,7 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "RuntimeInvisibleAnnotation" => {
+                    "RuntimeInvisibleAnnotations" => {
                         let length = self.u2();
                         let annotations = self.annotation_range(self.to_u2(length));
 
