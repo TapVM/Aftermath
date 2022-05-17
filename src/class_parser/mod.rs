@@ -30,6 +30,7 @@ pub enum CpNode<'class> {
     Double(Double),
     MethodHandle(MethodHandle),
     Utf8(Utf8<'class>),
+    None,
 }
 
 #[derive(Debug)]
@@ -687,24 +688,22 @@ pub struct Package {
 #[derive(Debug)]
 pub struct Parser<'class> {
     pub bytes: &'class [U1],
-    index: usize,
-    // original: &'class [U1],
 }
 
 impl<'class> Parser<'class> {
     pub fn new(bytes: &'class [u8]) -> Self {
-        Self { bytes, index: 0 }
+        Self { bytes }
     }
 
     fn u1(&mut self) -> U1 {
-        let output = self.bytes[self.index];
-        self.index += 1;
+        let output = self.bytes[0];
+        self.bytes = &self.bytes[1..];
         output
     }
 
     fn u1_range(&mut self, length: U4) -> &'class [U1] {
-        let output = &self.bytes[self.index..self.index + length as usize];
-        self.index += length as usize;
+        let output = &self.bytes[0..length as usize];
+        self.bytes = &self.bytes[length as usize..];
         output
     }
 
@@ -802,8 +801,9 @@ impl<'class> Parser<'class> {
 
     fn cp(&mut self, length: u16) -> Vec<CpNode<'class>> {
         let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
-        for cpi in 0..length - 1 {
-            dbg!(cpi);
+
+        while cp.len() + 1 < length as usize {
+            dbg!(cp.len() + 1);
             let tag = self.u1();
 
             println!("Current tag -> {}", tag);
@@ -876,6 +876,8 @@ impl<'class> Parser<'class> {
                         high_bytes,
                         low_bytes,
                     }));
+
+                    cp.push(CpNode::None);
                 }
 
                 6 => {
@@ -886,6 +888,8 @@ impl<'class> Parser<'class> {
                         high_bytes,
                         low_bytes,
                     }));
+
+                    cp.push(CpNode::None);
                 }
 
                 12 => {
@@ -1706,6 +1710,7 @@ impl<'class> Parser<'class> {
         let cp = self.cp(self.to_u2(cp_count));
 
         let access_flags = self.u2();
+        println!("Access flags -> {:X}", self.to_u2(access_flags));
         let this_class = self.u2();
         let super_class = self.u2();
         let interfaces_count = self.u2();
