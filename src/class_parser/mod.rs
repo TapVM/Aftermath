@@ -766,6 +766,7 @@ impl<'class> Parser<'class> {
                 let mut values = Vec::with_capacity(self.to_u2(length).into());
 
                 for _ in 0..self.to_u2(length) {
+                    println!("[");
                     values.push(self.element_value());
                 }
 
@@ -786,6 +787,7 @@ impl<'class> Parser<'class> {
 
         for _ in 0..self.to_u2(num_element_value_pairs) {
             let element_name_index = self.u2();
+            println!("RIP");
             let value = self.element_value();
 
             element_value_pairs.push(AnnotationInner {
@@ -1002,7 +1004,7 @@ impl<'class> Parser<'class> {
             }
             0x40 | 0x41 => {
                 let length = self.u2();
-                let mut table = Vec::new();
+                let mut table = Vec::with_capacity(self.to_u2(length).into());
 
                 for _ in 0..self.to_u2(length) {
                     let start_pc = self.u2();
@@ -1065,6 +1067,7 @@ impl<'class> Parser<'class> {
 
         for _ in 0..self.to_u2(num_element_value_pairs) {
             let element_name_index = self.u2();
+            dbg!();
             let value = self.element_value();
 
             element_value_pairs.push(TypeAnnotationInner {
@@ -1200,7 +1203,7 @@ impl<'class> Parser<'class> {
             let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
 
             if let CpNode::Utf8(tag) = tag {
-                match tag.bytes {
+                match dbg!(tag.bytes) {
                     "ConstantValue" => {
                         let value_index = self.u2();
 
@@ -1350,7 +1353,7 @@ impl<'class> Parser<'class> {
 
                     "StackMapTable" => {
                         let number_of_entries = self.u2();
-                        let mut entries = Vec::new();
+                        let mut entries = Vec::with_capacity(self.to_u2(number_of_entries).into());
 
                         for _ in 0..self.to_u2(number_of_entries) {
                             entries.push(self.stackmapframe());
@@ -1546,6 +1549,7 @@ impl<'class> Parser<'class> {
                     }
 
                     "AnnotationDefault" => {
+                        dbg!();
                         let default_value = self.element_value();
 
                         attributes.push(Attributes::AnnotationDefault(AnnotationDefault {
