@@ -7,7 +7,7 @@ import os
 
 
 def dbg(elem):
-    print(elem)
+    print(f"DBG ~> {elem}")
     return elem
 
 argv: list[str] = sys.argv
@@ -94,7 +94,7 @@ def main():
 
     command: str = argv[1].lower()
     
-    match dbg(f"Command -> {command}"):
+    match command:
         case "buildjvm": buildjvm()
         case "buildjdk": buildjdk()
         case "test":    test()
