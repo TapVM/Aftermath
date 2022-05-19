@@ -8,3 +8,6 @@
 flamegraph.svg
 perf.data
 perf.data.old
+
+# Mypy
+.mypy_cache
