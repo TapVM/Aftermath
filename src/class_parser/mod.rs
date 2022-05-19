@@ -699,22 +699,26 @@ pub struct Package {
 #[derive(Debug)]
 pub struct Parser<'class> {
     pub bytes: &'class [U1],
+    index: usize,
 }
 
 impl<'class> Parser<'class> {
     pub fn new(bytes: &'class [u8]) -> Self {
-        Self { bytes }
+        Self { bytes, index: 0 }
     }
 
     fn u1(&mut self) -> U1 {
         let output = self.bytes[0];
         self.bytes = &self.bytes[1..];
+        self.index += 1;
         output
     }
 
     fn u1_range(&mut self, length: U4) -> &'class [U1] {
         let output = &self.bytes[0..length as usize];
         self.bytes = &self.bytes[length as usize..];
+        self.index += length as usize;
+
         output
     }
 
@@ -1481,6 +1485,7 @@ impl<'class> Parser<'class> {
                     }
 
                     "RuntimeInvisibleAnnotations" => {
+                        println!("{}", self.index);
                         let length = self.u2();
                         let annotations = self.annotation_range(self.to_u2(length));
 
