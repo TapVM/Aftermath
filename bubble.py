@@ -95,8 +95,8 @@ def main():
     command: str = argv[1].lower()
     
     match command:
-        case "buildjvm": buildjvm()
-        case "buildjdk": buildjdk()
+        case "buildjvm":    buildjvm()
+        case "buildjdk":    buildjdk()
         case "test":    test()
         case "advancedtest":    advancedtest()
         case "classbasket": classbasket()

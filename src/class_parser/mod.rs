@@ -744,6 +744,7 @@ impl<'class> Parser<'class> {
     }
 
     fn element_value(&mut self) -> ElementValue {
+        dbg!(self.index);
         let tag = self.u1();
 
         match tag as char {
