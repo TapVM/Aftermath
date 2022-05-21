@@ -27,7 +27,7 @@ fn main() -> Result<()> {
     //     });
 
     let mut parser = Parser::new(include_bytes!(
-        "/var/home/gimbles/Desktop/Aftermath/class_basket/UsingToStringOrdering.class"
+        "/home/cookies/Desktop/Aftermath/class_basket/UsingToStringOrdering.class"
     ));
 
     dbg!(parser.parse()?);
