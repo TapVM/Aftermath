@@ -743,7 +743,6 @@ impl<'class> Parser<'class> {
     }
 
     fn element_value(&mut self) -> ElementValue {
-        dbg!(self.index);
         let tag = self.u1();
 
         match tag as char {
@@ -770,7 +769,6 @@ impl<'class> Parser<'class> {
                 let mut values = Vec::with_capacity(self.to_u2(length).into());
 
                 for _ in 0..self.to_u2(length) {
-                    println!("[");
                     values.push(self.element_value());
                 }
 
@@ -791,7 +789,6 @@ impl<'class> Parser<'class> {
 
         for _ in 0..self.to_u2(num_element_value_pairs) {
             let element_name_index = self.u2();
-            println!("RIP");
             let value = self.element_value();
 
             element_value_pairs.push(AnnotationInner {
@@ -1206,7 +1203,7 @@ impl<'class> Parser<'class> {
             let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
 
             if let CpNode::Utf8(tag) = tag {
-                match dbg!(tag.bytes) {
+                match tag.bytes {
                     "ConstantValue" => {
                         let value_index = self.u2();
 
@@ -1484,7 +1481,6 @@ impl<'class> Parser<'class> {
                     }
 
                     "RuntimeInvisibleAnnotations" => {
-                        println!("{}", self.index);
                         let length = self.u2();
                         let annotations = self.annotation_range(self.to_u2(length));
 
