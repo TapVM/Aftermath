@@ -2,9 +2,8 @@
 
 mod errors;
 
-use std::fmt::Debug;
-
 pub use errors::ParsingError;
+use std::fmt::Debug;
 
 type U1 = u8;
 type U4 = u32;
@@ -1072,7 +1071,6 @@ impl<'class> Parser<'class> {
 
         for _ in 0..self.to_u2(num_element_value_pairs) {
             let element_name_index = self.u2();
-            dbg!();
             let value = self.element_value();
 
             element_value_pairs.push(TypeAnnotationInner {
@@ -1535,7 +1533,6 @@ impl<'class> Parser<'class> {
 
                     "RuntimeVisibleTypeAnnotations" => {
                         let length = self.u2();
-
                         let annotations = self.type_annotation_range(self.to_u2(length));
 
                         attributes.push(Attributes::RuntimeVisibleTypeAnnotations(
@@ -1555,7 +1552,6 @@ impl<'class> Parser<'class> {
                     }
 
                     "AnnotationDefault" => {
-                        dbg!();
                         let default_value = self.element_value();
 
                         attributes.push(Attributes::AnnotationDefault(AnnotationDefault {
