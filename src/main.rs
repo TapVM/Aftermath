@@ -1,6 +1,5 @@
 use aftermath::class_parser::Parser;
 use color_eyre::Result;
-use std::ffi::OsStr;
 mod class_parser;
 
 pub fn black_box<T>(dummy: T) -> T {
@@ -14,19 +13,6 @@ pub fn black_box<T>(dummy: T) -> T {
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    // std::fs::read_dir("./class_basket")?
-    //     .map(|x| x.as_ref().unwrap().path())
-    //     .filter(|x| {
-    //         x.extension() == Some(OsStr::new("class"))
-    //             && dbg!(x.file_name()) != Some(OsStr::new("intentional_invalid_magic.class"))
-    //     })
-    //     .for_each(|x| {
-    //         let data = std::fs::read(x).unwrap();
-    //         let mut parser = Parser::new(&data);
-    //         parser.parse().unwrap();
-    //     });
-
-    // const path: &str =
     let mut parser = Parser::new(include_bytes!(concat!(
         env!("HOME"),
         "/Desktop/Aftermath/class_basket/UsingToStringOrdering.class"

@@ -1,21 +1,29 @@
 #![allow(dead_code)]
 
 mod errors;
+mod verification;
 
 pub use errors::ParsingError;
 use std::fmt::Debug;
+use verification::verify;
 
 type U1 = u8;
 type U4 = u32;
 type Result<T, E = ParsingError> = core::result::Result<T, E>;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 #[repr(transparent)]
 pub struct U2([u8; 2]);
 
 impl Debug for U2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", u16::from_be_bytes(self.0))
+    }
+}
+
+impl U2 {
+    pub fn to_u2(self) -> u16 {
+        u16::from_be_bytes(self.0)
     }
 }
 
@@ -766,9 +774,9 @@ impl<'class> Parser<'class> {
 
             '[' => {
                 let length = self.u2();
-                let mut values = Vec::with_capacity(self.to_u2(length).into());
+                let mut values = Vec::with_capacity(length.to_u2().into());
 
-                for _ in 0..self.to_u2(length) {
+                for _ in 0..length.to_u2() {
                     values.push(self.element_value()?);
                 }
 
@@ -784,10 +792,9 @@ impl<'class> Parser<'class> {
     fn annotation(&mut self) -> Result<Annotation> {
         let type_index = self.u2();
         let num_element_value_pairs = self.u2();
-        let mut element_value_pairs =
-            Vec::with_capacity(self.to_u2(num_element_value_pairs).into());
+        let mut element_value_pairs = Vec::with_capacity(num_element_value_pairs.to_u2().into());
 
-        for _ in 0..self.to_u2(num_element_value_pairs) {
+        for _ in 0..num_element_value_pairs.to_u2() {
             let element_name_index = self.u2();
             let value = self.element_value()?;
 
@@ -822,7 +829,7 @@ impl<'class> Parser<'class> {
             match tag {
                 1 => {
                     let length = self.u2();
-                    let bytes = self.u1_range(self.to_u2(length).into());
+                    let bytes = self.u1_range(length.to_u2().into());
 
                     // TODO: mutf8 verification
 
@@ -1008,9 +1015,9 @@ impl<'class> Parser<'class> {
             }
             0x40 | 0x41 => {
                 let length = self.u2();
-                let mut table = Vec::with_capacity(self.to_u2(length).into());
+                let mut table = Vec::with_capacity(length.to_u2().into());
 
-                for _ in 0..self.to_u2(length) {
+                for _ in 0..length.to_u2() {
                     let start_pc = self.u2();
                     let length = self.u2();
                     let index = self.u2();
@@ -1066,10 +1073,9 @@ impl<'class> Parser<'class> {
 
         let type_index = self.u2();
         let num_element_value_pairs = self.u2();
-        let mut element_value_pairs =
-            Vec::with_capacity(self.to_u2(num_element_value_pairs).into());
+        let mut element_value_pairs = Vec::with_capacity(num_element_value_pairs.to_u2().into());
 
-        for _ in 0..self.to_u2(num_element_value_pairs) {
+        for _ in 0..num_element_value_pairs.to_u2() {
             let element_name_index = self.u2();
             let value = self.element_value()?;
 
@@ -1148,16 +1154,16 @@ impl<'class> Parser<'class> {
                 let offset_delta = self.u2();
 
                 let length = self.u2();
-                let mut locals = Vec::with_capacity(self.to_u2(length) as usize);
+                let mut locals = Vec::with_capacity(length.to_u2() as usize);
 
-                for _ in 0..self.to_u2(length) {
+                for _ in 0..length.to_u2() {
                     locals.push(self.verification_type_info()?);
                 }
 
                 let length = self.u2();
-                let mut stack = Vec::with_capacity(self.to_u2(length) as usize);
+                let mut stack = Vec::with_capacity(length.to_u2() as usize);
 
-                for _ in 0..self.to_u2(length) {
+                for _ in 0..length.to_u2() {
                     stack.push(self.verification_type_info()?);
                 }
 
@@ -1205,7 +1211,7 @@ impl<'class> Parser<'class> {
         while attributes.len() < length as usize {
             let attribute_name_index = self.u2();
             let attribute_length = self.u4();
-            let tag = &cp[self.to_u2(attribute_name_index) as usize - 1];
+            let tag = &cp[attribute_name_index.to_u2() as usize - 1];
 
             if let CpNode::Utf8(tag) = tag {
                 match tag.bytes {
@@ -1225,9 +1231,9 @@ impl<'class> Parser<'class> {
                         let module_version_index = self.u2();
 
                         let requires_count = self.u2();
-                        let mut requires = Vec::with_capacity(self.to_u2(requires_count).into());
+                        let mut requires = Vec::with_capacity(requires_count.to_u2().into());
 
-                        for _ in 0..self.to_u2(requires_count) {
+                        for _ in 0..requires_count.to_u2() {
                             let requires_index = self.u2();
                             let requires_flags = self.u2();
                             let require_version_index = self.u2();
@@ -1240,13 +1246,12 @@ impl<'class> Parser<'class> {
                         }
 
                         let exports_count = self.u2();
-                        let mut exports = Vec::with_capacity(self.to_u2(exports_count).into());
-                        for _ in 0..self.to_u2(exports_count) {
+                        let mut exports = Vec::with_capacity(exports_count.to_u2().into());
+                        for _ in 0..exports_count.to_u2() {
                             let exports_index = self.u2();
                             let exports_flags = self.u2();
                             let exports_to_count = self.u2();
-                            let exports_to_index =
-                                self.u2_range(self.to_u2(exports_to_count).into());
+                            let exports_to_index = self.u2_range(exports_to_count.to_u2().into());
 
                             exports.push(ModuleExports {
                                 exports_index,
@@ -1256,13 +1261,13 @@ impl<'class> Parser<'class> {
                         }
 
                         let opens_count = self.u2();
-                        let mut opens = Vec::with_capacity(self.to_u2(opens_count).into());
+                        let mut opens = Vec::with_capacity(opens_count.to_u2().into());
 
-                        for _ in 0..self.to_u2(opens_count) {
+                        for _ in 0..opens_count.to_u2() {
                             let opens_index = self.u2();
                             let opens_flags = self.u2();
                             let opens_to_count = self.u2();
-                            let opens_to_index = self.u2_range(self.to_u2(opens_to_count).into());
+                            let opens_to_index = self.u2_range(opens_to_count.to_u2().into());
 
                             opens.push(ModuleOpens {
                                 opens_index,
@@ -1272,16 +1277,16 @@ impl<'class> Parser<'class> {
                         }
 
                         let uses_count = self.u2();
-                        let uses_index = self.u2_range(self.to_u2(uses_count).into());
+                        let uses_index = self.u2_range(uses_count.to_u2().into());
 
                         let provides_count = self.u2();
-                        let mut provides = Vec::with_capacity(self.to_u2(provides_count).into());
+                        let mut provides = Vec::with_capacity(provides_count.to_u2().into());
 
-                        for _ in 0..self.to_u2(provides_count) {
+                        for _ in 0..provides_count.to_u2() {
                             let provides_index = self.u2();
                             let provides_with_count = self.u2();
                             let provides_with_index =
-                                self.u2_range(self.to_u2(provides_with_count).into());
+                                self.u2_range(provides_with_count.to_u2().into());
 
                             provides.push(ModuleProvides {
                                 provides_index,
@@ -1308,9 +1313,9 @@ impl<'class> Parser<'class> {
                         let code = self.u1_range(code_length);
                         let exception_table_length = self.u2();
                         let mut exception_table =
-                            Vec::with_capacity(self.to_u2(exception_table_length).into());
+                            Vec::with_capacity(exception_table_length.to_u2().into());
 
-                        for _ in 0..self.to_u2(exception_table_length) {
+                        for _ in 0..exception_table_length.to_u2() {
                             let start_pc = self.u2();
                             let end_pc = self.u2();
                             let handler_pc = self.u2();
@@ -1325,7 +1330,7 @@ impl<'class> Parser<'class> {
                         }
 
                         let attributes_count = self.u2();
-                        let local_attributes = self.attributes(self.to_u2(attributes_count), cp)?;
+                        let local_attributes = self.attributes(attributes_count.to_u2(), cp)?;
 
                         attributes.push(Attributes::Code(AttrCode {
                             max_stack,
@@ -1339,9 +1344,9 @@ impl<'class> Parser<'class> {
                     "LineNumberTable" => {
                         let line_number_table_length = self.u2();
                         let mut line_number_table =
-                            Vec::with_capacity(self.to_u2(line_number_table_length).into());
+                            Vec::with_capacity(line_number_table_length.to_u2().into());
 
-                        for _ in 0..self.to_u2(line_number_table_length) {
+                        for _ in 0..line_number_table_length.to_u2() {
                             let start_pc = self.u2();
                             let line_number = self.u2();
 
@@ -1358,9 +1363,9 @@ impl<'class> Parser<'class> {
 
                     "StackMapTable" => {
                         let number_of_entries = self.u2();
-                        let mut entries = Vec::with_capacity(self.to_u2(number_of_entries).into());
+                        let mut entries = Vec::with_capacity(number_of_entries.to_u2().into());
 
-                        for _ in 0..self.to_u2(number_of_entries) {
+                        for _ in 0..number_of_entries.to_u2() {
                             entries.push(self.stackmapframe()?);
                         }
 
@@ -1370,7 +1375,7 @@ impl<'class> Parser<'class> {
                     "Exceptions" => {
                         let number_of_exceptions = self.u2();
                         let exception_index_table =
-                            self.u2_range(self.to_u2(number_of_exceptions).into());
+                            self.u2_range(number_of_exceptions.to_u2().into());
 
                         attributes.push(Attributes::Exceptions(Exceptions {
                             exception_index_table,
@@ -1379,9 +1384,9 @@ impl<'class> Parser<'class> {
 
                     "InnerClasses" => {
                         let number_of_classes = self.u2();
-                        let mut classes = Vec::with_capacity(self.to_u2(number_of_classes).into());
+                        let mut classes = Vec::with_capacity(number_of_classes.to_u2().into());
 
-                        for _ in 0..self.to_u2(number_of_classes) {
+                        for _ in 0..number_of_classes.to_u2() {
                             let inner_class_info_index = self.u2();
                             let outer_class_info_index = self.u2();
                             let inner_name_index = self.u2();
@@ -1422,10 +1427,9 @@ impl<'class> Parser<'class> {
 
                     "LocalVariableTable" => {
                         let length = self.u2();
-                        let mut local_variable_table =
-                            Vec::with_capacity(self.to_u2(length).into());
+                        let mut local_variable_table = Vec::with_capacity(length.to_u2().into());
 
-                        for _ in 0..self.to_u2(length) {
+                        for _ in 0..length.to_u2() {
                             let start_pc = self.u2();
                             let length = self.u2();
                             let name_index = self.u2();
@@ -1449,9 +1453,9 @@ impl<'class> Parser<'class> {
                     "LocalVariableTypeTable" => {
                         let length = self.u2();
                         let mut local_variable_type_table =
-                            Vec::with_capacity(self.to_u2(length).into());
+                            Vec::with_capacity(length.to_u2().into());
 
-                        for _ in 0..self.to_u2(length) {
+                        for _ in 0..length.to_u2() {
                             let start_pc = self.u2();
                             let length = self.u2();
                             let name_index = self.u2();
@@ -1478,7 +1482,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeVisibleAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.annotation_range(self.to_u2(length))?;
+                        let annotations = self.annotation_range(length.to_u2())?;
 
                         attributes.push(Attributes::RuntimeVisibleAnnotations(
                             RuntimeVisibleAnnotations { annotations },
@@ -1487,7 +1491,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeInvisibleAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.annotation_range(self.to_u2(length))?;
+                        let annotations = self.annotation_range(length.to_u2())?;
 
                         attributes.push(Attributes::RuntimeInvisibleAnnotations(
                             RuntimeInvisibleAnnotations { annotations },
@@ -1500,7 +1504,7 @@ impl<'class> Parser<'class> {
 
                         for _ in 0..length {
                             let length = self.u2();
-                            let annotations = self.annotation_range(self.to_u2(length))?;
+                            let annotations = self.annotation_range(length.to_u2())?;
                             parameter_annotations.push(
                                 ParameterAnnotationsRuntimeParameterAnnotationsAttr { annotations },
                             )
@@ -1519,7 +1523,7 @@ impl<'class> Parser<'class> {
 
                         for _ in 0..length {
                             let length = self.u2();
-                            let annotations = self.annotation_range(self.to_u2(length))?;
+                            let annotations = self.annotation_range(length.to_u2())?;
                             parameter_annotations.push(
                                 ParameterAnnotationsRuntimeParameterAnnotationsAttr { annotations },
                             )
@@ -1534,7 +1538,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeVisibleTypeAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.type_annotation_range(self.to_u2(length))?;
+                        let annotations = self.type_annotation_range(length.to_u2())?;
 
                         attributes.push(Attributes::RuntimeVisibleTypeAnnotations(
                             RuntimeVisibleTypeAnnotations {
@@ -1545,7 +1549,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeInvisibleTypeAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.type_annotation_range(self.to_u2(length))?;
+                        let annotations = self.type_annotation_range(length.to_u2())?;
 
                         attributes.push(Attributes::RuntimeInvisibleTypeAnnotations(
                             RuntimeInvisibleTypeAnnotations { annotations },
@@ -1562,13 +1566,13 @@ impl<'class> Parser<'class> {
 
                     "BootstrapMethods" => {
                         let length = self.u2();
-                        let mut bootstrap_methods = Vec::with_capacity(self.to_u2(length).into());
+                        let mut bootstrap_methods = Vec::with_capacity(length.to_u2().into());
 
-                        for _ in 0..self.to_u2(length) {
+                        for _ in 0..length.to_u2() {
                             let bootstrap_method_ref = self.u2();
                             let num_bootstrap_arguments = self.u2();
                             let bootstrap_arguments =
-                                self.u2_range(self.to_u2(num_bootstrap_arguments).into());
+                                self.u2_range(num_bootstrap_arguments.to_u2().into());
 
                             bootstrap_methods.push(BootStrapMethodsInner {
                                 bootstrap_method_ref,
@@ -1602,7 +1606,7 @@ impl<'class> Parser<'class> {
 
                     "ModulePackages" => {
                         let package_count = self.u2();
-                        let package_index = self.u2_range(self.to_u2(package_count).into());
+                        let package_index = self.u2_range(package_count.to_u2().into());
 
                         attributes
                             .push(Attributes::ModulePackages(ModulePackages { package_index }))
@@ -1624,19 +1628,19 @@ impl<'class> Parser<'class> {
 
                     "NestMembers" => {
                         let number_of_classes = self.u2();
-                        let classes = self.u2_range(self.to_u2(number_of_classes).into());
+                        let classes = self.u2_range(number_of_classes.to_u2().into());
                         attributes.push(Attributes::NestMembers(NestMembers { classes }))
                     }
 
                     "Record" => {
                         let count = self.u2();
-                        let mut components = Vec::with_capacity(self.to_u2(count).into());
+                        let mut components = Vec::with_capacity(count.to_u2().into());
 
-                        for _ in 0..self.to_u2(count) {
+                        for _ in 0..count.to_u2() {
                             let name_index = self.u2();
                             let descriptor_index = self.u2();
                             let attributes_count = self.u2();
-                            let attributes = self.attributes(self.to_u2(attributes_count), cp)?;
+                            let attributes = self.attributes(attributes_count.to_u2(), cp)?;
 
                             components.push(RecordComponentInfo {
                                 name_index,
@@ -1650,7 +1654,7 @@ impl<'class> Parser<'class> {
 
                     "PermittedSubclasses" => {
                         let length = self.u2();
-                        let classes = self.u2_range(self.to_u2(length).into());
+                        let classes = self.u2_range(length.to_u2().into());
 
                         attributes.push(Attributes::PermittedSubclasses(PermittedSubclasses {
                             classes,
@@ -1679,7 +1683,7 @@ impl<'class> Parser<'class> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.attributes(self.to_u2(attributes_count), cp)?;
+            let attributes = self.attributes(attributes_count.to_u2(), cp)?;
             methods.push(MethodInfo {
                 access_flags,
                 name_index,
@@ -1699,7 +1703,7 @@ impl<'class> Parser<'class> {
             let name_index = self.u2();
             let descriptor_index = self.u2();
             let attributes_count = self.u2();
-            let attributes = self.attributes(self.to_u2(attributes_count), cp)?;
+            let attributes = self.attributes(attributes_count.to_u2(), cp)?;
 
             fields.push(FieldInfo {
                 access_flags,
@@ -1723,25 +1727,25 @@ impl<'class> Parser<'class> {
         let major_v = self.u2();
 
         let cp_count = self.u2();
-        let cp = self.cp(self.to_u2(cp_count))?;
+        let cp = self.cp(cp_count.to_u2())?;
 
         let access_flags = self.u2();
         let this_class = self.u2();
         let super_class = self.u2();
 
         let interfaces_count = self.u2();
-        let interfaces = self.u2_range(self.to_u2(interfaces_count) as u32);
+        let interfaces = self.u2_range(interfaces_count.to_u2() as u32);
 
         let fields_count = self.u2();
-        let fields = self.fields(self.to_u2(fields_count), &cp)?;
+        let fields = self.fields(fields_count.to_u2(), &cp)?;
 
         let methods_count = self.u2();
-        let methods = self.methods(self.to_u2(methods_count), &cp)?;
+        let methods = self.methods(methods_count.to_u2(), &cp)?;
 
         let attributes_count = self.u2();
-        let attributes = self.attributes(self.to_u2(attributes_count), &cp)?;
+        let attributes = self.attributes(attributes_count.to_u2(), &cp)?;
 
-        Ok(ClassFile {
+        Ok(verify(ClassFile {
             minor_v,
             major_v,
             cp,
@@ -1752,6 +1756,6 @@ impl<'class> Parser<'class> {
             fields,
             methods,
             attributes,
-        })
+        })?)
     }
 }
