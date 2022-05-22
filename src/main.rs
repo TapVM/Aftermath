@@ -26,9 +26,11 @@ fn main() -> Result<()> {
     //         parser.parse().unwrap();
     //     });
 
-    let mut parser = Parser::new(include_bytes!(
-        "/home/cookies/Desktop/Aftermath/class_basket/UsingToStringOrdering.class"
-    ));
+    // const path: &str =
+    let mut parser = Parser::new(include_bytes!(concat!(
+        env!("HOME"),
+        "/Desktop/Aftermath/class_basket/UsingToStringOrdering.class"
+    )));
 
     dbg!(parser.parse()?);
 

@@ -33,6 +33,7 @@ The following are the available commands.
 # Development utilities.
 - classbasket ~ Builds random small Java snippets for JVM testing.
 - fmt ~ Formats the source code.
+- info [topic] ~ Gives information regarding the JVM about the given topic.
 
 Note -> Set the "BUBBLE_RELEASE" environment variable to "true" to build release builds.
 """
@@ -92,7 +93,7 @@ def fmt():
 def info():
     try:
         info: str = argv[2]
-    except KeyError:
+    except IndexError:
         print(f"\n{RED}Please provide an info ID. Available options ->{GREEN}")
         for key in infobox.keys():
             print(f"~ {key}")
