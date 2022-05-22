@@ -747,7 +747,7 @@ impl<'class> Parser<'class> {
         let tag = self.u1();
 
         match tag as char {
-            'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 's' => {
+            'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 's' | 'Z' => {
                 ElementValue::ConstValueIndex(self.u2())
             }
 
