@@ -742,46 +742,46 @@ impl<'class> Parser<'class> {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
-    fn element_value(&mut self) -> ElementValue {
+    fn element_value(&mut self) -> Result<ElementValue> {
         let tag = self.u1();
 
         match tag as char {
             'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 's' | 'Z' => {
-                ElementValue::ConstValueIndex(self.u2())
+                Ok(ElementValue::ConstValueIndex(self.u2()))
             }
 
             'e' => {
                 let type_name_index = self.u2();
                 let const_name_index = self.u2();
 
-                ElementValue::EnumConstValue(EnumConstValue {
+                Ok(ElementValue::EnumConstValue(EnumConstValue {
                     type_name_index,
                     const_name_index,
-                })
+                }))
             }
 
-            'c' => ElementValue::ClassInfoIndex(self.u2()),
+            'c' => Ok(ElementValue::ClassInfoIndex(self.u2())),
 
-            '@' => ElementValue::AnnotationValue(self.annotation()),
+            '@' => Ok(ElementValue::AnnotationValue(self.annotation()?)),
 
             '[' => {
                 let length = self.u2();
                 let mut values = Vec::with_capacity(self.to_u2(length).into());
 
                 for _ in 0..self.to_u2(length) {
-                    values.push(self.element_value());
+                    values.push(self.element_value()?);
                 }
 
-                ElementValue::ArrayValue(ArrayValue {
+                Ok(ElementValue::ArrayValue(ArrayValue {
                     element_value: values,
-                })
+                }))
             }
 
-            _ => unreachable!("{}", tag as char),
+            _ => Err(ParsingError::InvalidElementValue(tag as char)),
         }
     }
 
-    fn annotation(&mut self) -> Annotation {
+    fn annotation(&mut self) -> Result<Annotation> {
         let type_index = self.u2();
         let num_element_value_pairs = self.u2();
         let mut element_value_pairs =
@@ -789,7 +789,7 @@ impl<'class> Parser<'class> {
 
         for _ in 0..self.to_u2(num_element_value_pairs) {
             let element_name_index = self.u2();
-            let value = self.element_value();
+            let value = self.element_value()?;
 
             element_value_pairs.push(AnnotationInner {
                 element_name_index,
@@ -797,23 +797,23 @@ impl<'class> Parser<'class> {
             })
         }
 
-        Annotation {
+        Ok(Annotation {
             type_index,
             element_value_pairs,
-        }
+        })
     }
 
-    fn annotation_range(&mut self, length: u16) -> Vec<Annotation> {
+    fn annotation_range(&mut self, length: u16) -> Result<Vec<Annotation>> {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
-            annotations.push(self.annotation());
+            annotations.push(self.annotation()?);
         }
 
-        annotations
+        Ok(annotations)
     }
 
-    fn cp(&mut self, length: u16) -> Vec<CpNode<'class>> {
+    fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>> {
         let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
 
         while cp.len() + 1 < length as usize {
@@ -823,6 +823,9 @@ impl<'class> Parser<'class> {
                 1 => {
                     let length = self.u2();
                     let bytes = self.u1_range(self.to_u2(length).into());
+
+                    // TODO: mutf8 verification
+
                     cp.push(CpNode::Utf8(Utf8 {
                         bytes: std::str::from_utf8(&bytes).unwrap(),
                     }))
@@ -962,14 +965,14 @@ impl<'class> Parser<'class> {
                     cp.push(CpNode::Package(Package { name_index }))
                 }
 
-                _ => unreachable!("Constant Pool -> {}", tag),
+                _ => return Err(ParsingError::ConstantPoolTag(tag)),
             }
         }
 
-        cp
+        Ok(cp)
     }
 
-    pub fn type_annotation(&mut self) -> TypeAnnotation {
+    pub fn type_annotation(&mut self) -> Result<TypeAnnotation> {
         let target_type = self.u1();
         let target_info = match target_type {
             0x00 | 0x01 => {
@@ -1044,7 +1047,7 @@ impl<'class> Parser<'class> {
                     type_argument_index,
                 })
             }
-            _ => unreachable!(),
+            _ => return Err(ParsingError::InvalidTargetType(target_type)),
         };
 
         let type_path_length = self.u1();
@@ -1068,7 +1071,7 @@ impl<'class> Parser<'class> {
 
         for _ in 0..self.to_u2(num_element_value_pairs) {
             let element_name_index = self.u2();
-            let value = self.element_value();
+            let value = self.element_value()?;
 
             element_value_pairs.push(TypeAnnotationInner {
                 element_name_index,
@@ -1076,68 +1079,70 @@ impl<'class> Parser<'class> {
             })
         }
 
-        TypeAnnotation {
+        Ok(TypeAnnotation {
             target_info,
             target_path,
             type_index,
             num_element_value_pairs,
             element_value_pairs,
-        }
+        })
     }
 
-    fn type_annotation_range(&mut self, length: u16) -> Vec<TypeAnnotation> {
+    fn type_annotation_range(&mut self, length: u16) -> Result<Vec<TypeAnnotation>> {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
-            annotations.push(self.type_annotation());
+            annotations.push(self.type_annotation()?);
         }
 
-        annotations
+        Ok(annotations)
     }
 
-    fn stackmapframe(&mut self) -> StackMapFrame {
+    fn stackmapframe(&mut self) -> Result<StackMapFrame> {
         let frame_type = self.u1();
 
         match frame_type {
-            0..=63 => StackMapFrame::SameFrame(SameFrame { frame_type }),
-            64..=127 => StackMapFrame::SameLocals1StackItemFrame(SameLocals1StackItemFrame {
-                frame_type,
-                stack: self.verification_type_info(),
-            }),
+            0..=63 => Ok(StackMapFrame::SameFrame(SameFrame { frame_type })),
+            64..=127 => Ok(StackMapFrame::SameLocals1StackItemFrame(
+                SameLocals1StackItemFrame {
+                    frame_type,
+                    stack: self.verification_type_info()?,
+                },
+            )),
             247 => {
                 let offset_delta = self.u2();
-                let stack = self.verification_type_info();
+                let stack = self.verification_type_info()?;
 
-                StackMapFrame::SameLocals1StackItemFrameExtended(
+                Ok(StackMapFrame::SameLocals1StackItemFrameExtended(
                     SameLocals1StackItemFrameExtended {
                         frame_type,
                         offset_delta,
                         stack,
                     },
-                )
+                ))
             }
-            248..=250 => StackMapFrame::ChopFrame(ChopFrame {
+            248..=250 => Ok(StackMapFrame::ChopFrame(ChopFrame {
                 frame_type,
                 offset_delta: self.u2(),
-            }),
-            251 => StackMapFrame::SameFrameExtended(SameFrameExtended {
+            })),
+            251 => Ok(StackMapFrame::SameFrameExtended(SameFrameExtended {
                 frame_type,
                 offset_delta: self.u2(),
-            }),
+            })),
             252..=254 => {
                 let offset_delta = self.u2();
                 let length = frame_type - 251;
                 let mut locals = Vec::with_capacity(length as usize);
 
                 for _ in 0..length {
-                    locals.push(self.verification_type_info());
+                    locals.push(self.verification_type_info()?);
                 }
 
-                StackMapFrame::AppendFrame(AppendFrame {
+                Ok(StackMapFrame::AppendFrame(AppendFrame {
                     frame_type,
                     offset_delta,
                     locals,
-                })
+                }))
             }
             255 => {
                 let offset_delta = self.u2();
@@ -1146,31 +1151,31 @@ impl<'class> Parser<'class> {
                 let mut locals = Vec::with_capacity(self.to_u2(length) as usize);
 
                 for _ in 0..self.to_u2(length) {
-                    locals.push(self.verification_type_info());
+                    locals.push(self.verification_type_info()?);
                 }
 
                 let length = self.u2();
                 let mut stack = Vec::with_capacity(self.to_u2(length) as usize);
 
                 for _ in 0..self.to_u2(length) {
-                    stack.push(self.verification_type_info());
+                    stack.push(self.verification_type_info()?);
                 }
 
-                StackMapFrame::FullFrame(FullFrame {
+                Ok(StackMapFrame::FullFrame(FullFrame {
                     frame_type,
                     offset_delta,
                     locals,
                     stack,
-                })
+                }))
             }
-            _ => unreachable!(),
+            _ => return Err(ParsingError::InvalidFrameType(frame_type)),
         }
     }
 
-    fn verification_type_info(&mut self) -> VerificationTypeInfo {
+    fn verification_type_info(&mut self) -> Result<VerificationTypeInfo> {
         let tag = self.u1();
 
-        match tag {
+        Ok(match tag {
             0 => VerificationTypeInfo::TopVariableInfo(TopVariableInfo { tag }),
             1 => VerificationTypeInfo::IntegerVariableInfo(IntegerVariableInfo { tag }),
             2 => VerificationTypeInfo::FloatVariableInfo(FloatVariableInfo { tag }),
@@ -1190,8 +1195,8 @@ impl<'class> Parser<'class> {
                 tag,
                 offset: self.u2(),
             }),
-            _ => unreachable!(),
-        }
+            _ => Err(ParsingError::InvalidTagVerificationTypeInfo(tag))?,
+        })
     }
 
     fn attributes(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
@@ -1356,7 +1361,7 @@ impl<'class> Parser<'class> {
                         let mut entries = Vec::with_capacity(self.to_u2(number_of_entries).into());
 
                         for _ in 0..self.to_u2(number_of_entries) {
-                            entries.push(self.stackmapframe());
+                            entries.push(self.stackmapframe()?);
                         }
 
                         attributes.push(Attributes::StackMapTable(StackMapTable { entries }))
@@ -1473,7 +1478,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeVisibleAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.annotation_range(self.to_u2(length));
+                        let annotations = self.annotation_range(self.to_u2(length))?;
 
                         attributes.push(Attributes::RuntimeVisibleAnnotations(
                             RuntimeVisibleAnnotations { annotations },
@@ -1482,7 +1487,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeInvisibleAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.annotation_range(self.to_u2(length));
+                        let annotations = self.annotation_range(self.to_u2(length))?;
 
                         attributes.push(Attributes::RuntimeInvisibleAnnotations(
                             RuntimeInvisibleAnnotations { annotations },
@@ -1495,7 +1500,7 @@ impl<'class> Parser<'class> {
 
                         for _ in 0..length {
                             let length = self.u2();
-                            let annotations = self.annotation_range(self.to_u2(length));
+                            let annotations = self.annotation_range(self.to_u2(length))?;
                             parameter_annotations.push(
                                 ParameterAnnotationsRuntimeParameterAnnotationsAttr { annotations },
                             )
@@ -1514,7 +1519,7 @@ impl<'class> Parser<'class> {
 
                         for _ in 0..length {
                             let length = self.u2();
-                            let annotations = self.annotation_range(self.to_u2(length));
+                            let annotations = self.annotation_range(self.to_u2(length))?;
                             parameter_annotations.push(
                                 ParameterAnnotationsRuntimeParameterAnnotationsAttr { annotations },
                             )
@@ -1529,7 +1534,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeVisibleTypeAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.type_annotation_range(self.to_u2(length));
+                        let annotations = self.type_annotation_range(self.to_u2(length))?;
 
                         attributes.push(Attributes::RuntimeVisibleTypeAnnotations(
                             RuntimeVisibleTypeAnnotations {
@@ -1540,7 +1545,7 @@ impl<'class> Parser<'class> {
 
                     "RuntimeInvisibleTypeAnnotations" => {
                         let length = self.u2();
-                        let annotations = self.type_annotation_range(self.to_u2(length));
+                        let annotations = self.type_annotation_range(self.to_u2(length))?;
 
                         attributes.push(Attributes::RuntimeInvisibleTypeAnnotations(
                             RuntimeInvisibleTypeAnnotations { annotations },
@@ -1548,7 +1553,7 @@ impl<'class> Parser<'class> {
                     }
 
                     "AnnotationDefault" => {
-                        let default_value = self.element_value();
+                        let default_value = self.element_value()?;
 
                         attributes.push(Attributes::AnnotationDefault(AnnotationDefault {
                             default_value,
@@ -1652,7 +1657,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    _ => unimplemented!("{:?} {}", tag, attribute_length),
+                    _ => return Err(ParsingError::InvalidAttribute(tag.bytes.to_string())),
                 }
             } else {
                 return Err(ParsingError::AttributeNotUtf8);
@@ -1718,7 +1723,7 @@ impl<'class> Parser<'class> {
         let major_v = self.u2();
 
         let cp_count = self.u2();
-        let cp = self.cp(self.to_u2(cp_count));
+        let cp = self.cp(self.to_u2(cp_count))?;
 
         let access_flags = self.u2();
         let this_class = self.u2();

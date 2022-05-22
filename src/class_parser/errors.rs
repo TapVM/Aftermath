@@ -87,6 +87,21 @@ pub enum ParsingError {
     #[error("Error (Attributes) -> The Value attribute can only have the Integer, Float, Long, Double or String constant pool index.")]
     IllegalValueAttribute,
 
+    #[error("Malformed class -> Invalid Element Value -> `{0}`")]
+    InvalidElementValue(char),
+
+    #[error("Malformed class -> Invalid target type -> `{0}`")]
+    InvalidTargetType(u8),
+
+    #[error("Malformed class -> Invalid frame type -> `{0}`")]
+    InvalidFrameType(u8),
+
+    #[error("Malformed class -> Invalid verification type info tag -> `{0}`")]
+    InvalidTagVerificationTypeInfo(u8),
+
+    #[error("Malformed class -> InvalidAttribute -> `{0}`")]
+    InvalidAttribute(String),
+
     #[error("I/O Error -> ")]
     IoError(#[from] std::io::Error),
 }
