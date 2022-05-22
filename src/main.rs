@@ -36,6 +36,3 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-#[cfg(tests)]
-mod tests;
