@@ -84,7 +84,7 @@ def test():
 
 
 def fmt():
-    print(f"\n{GREEN}Formatting...{RESET}\n")
+    print(f"\n{GREEN}Formatting...{RESET}")
     if os.system("cargo fmt") != 0:
         print(f"\n{RED}Formatting FAILED. :({RESET}\n")
     else:
