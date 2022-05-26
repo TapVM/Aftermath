@@ -1,17 +1,16 @@
 #![allow(dead_code)]
 
 mod errors;
-mod verification;
+pub mod verification;
 
 pub use errors::ParsingError;
 use std::fmt::Debug;
-use verification::verify;
 
 type U1 = u8;
 type U4 = u32;
 type Result<T, E = ParsingError> = core::result::Result<T, E>;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone)]
 #[repr(transparent)]
 pub struct U2([u8; 2]);
 
@@ -834,7 +833,7 @@ impl<'class> Parser<'class> {
                     // TODO: mutf8 verification
 
                     cp.push(CpNode::Utf8(Utf8 {
-                        bytes: std::str::from_utf8(&bytes).unwrap(),
+                        bytes: std::str::from_utf8(bytes).unwrap(),
                     }))
                 }
 
@@ -1174,7 +1173,7 @@ impl<'class> Parser<'class> {
                     stack,
                 }))
             }
-            _ => return Err(ParsingError::InvalidFrameType(frame_type)),
+            _ => Err(ParsingError::InvalidFrameType(frame_type)),
         }
     }
 
@@ -1745,7 +1744,7 @@ impl<'class> Parser<'class> {
         let attributes_count = self.u2();
         let attributes = self.attributes(attributes_count.to_u2(), &cp)?;
 
-        Ok(verify(ClassFile {
+        Ok(ClassFile {
             minor_v,
             major_v,
             cp,
@@ -1756,6 +1755,6 @@ impl<'class> Parser<'class> {
             fields,
             methods,
             attributes,
-        })?)
+        })
     }
 }
