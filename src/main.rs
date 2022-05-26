@@ -1,6 +1,7 @@
-use aftermath::class_parser::Parser;
 use color_eyre::Result;
 mod class_parser;
+use class_parser::verification::Verifier;
+use class_parser::Parser;
 
 pub fn black_box<T>(dummy: T) -> T {
     unsafe {
@@ -13,12 +14,16 @@ pub fn black_box<T>(dummy: T) -> T {
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let mut parser = Parser::new(include_bytes!(concat!(
-        env!("HOME"),
-        "/Desktop/Aftermath/class_basket/UsingToStringOrdering.class"
-    )));
+    let file = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/class_basket/UsingToStringOrdering.class"
+    ));
 
-    dbg!(parser.parse()?);
+    let mut parser = Parser::new(file);
+    let class = parser.parse()?;
+
+    let verification = Verifier::new(&class);
+    dbg!(verification.verify()?);
 
     Ok(())
 }
