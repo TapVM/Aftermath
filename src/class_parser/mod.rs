@@ -708,6 +708,18 @@ pub struct Parser<'class> {
     index: usize,
 }
 
+impl<'class> Utf8<'class> {
+    fn verify_binary_class_or_interface_name(&self) -> Result<()> {
+        for char in self.bytes.chars() {
+            if char == '.' {
+                return Err(ParsingError::BinaryNameContainsDot);
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl<'class> Parser<'class> {
     pub fn new(bytes: &'class [u8]) -> Self {
         Self { bytes, index: 0 }

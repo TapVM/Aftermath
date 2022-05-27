@@ -52,6 +52,8 @@ pub enum ParsingError {
     AnnotationWithoutInterface,
     #[error("Malformed class -> Invalid version as Module, major version must be equal or bigger than 53.")]
     InvalidVersionAsModule,
+    #[error("Malformed class -> Binary Class or Interface name contains the `.` (Dot/Period) character, which is illegal.")]
+    BinaryNameContainsDot,
     #[error("Malformed class -> A Class constant pool node did not point to a Utf8 node in the constant pool, which is illegal")]
     ClassNodeNotPointingToUtf8,
     #[error("Malformed class -> this_class was NOT module-info, but the class file is a module, which is illegal.")]

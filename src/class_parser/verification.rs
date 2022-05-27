@@ -117,10 +117,15 @@ impl<'a> Verifier<'a> {
             CpNode::Class(class) => {
                 let node = &cp[class.name_index.to_u2() as usize - 1];
                 match node {
-                    CpNode::Utf8(_) => self.verify_cp_node(node)?,
+                    CpNode::Utf8(string) => {
+                        string.verify_binary_class_or_interface_name()?;
+                        self.verify_cp_node(node)?;
+                    }
+
                     _ => return Err(ParsingError::ClassNodeNotPointingToUtf8),
                 };
             }
+
             CpNode::FieldRef(fieldref) => {
                 let class_index = fieldref.class_index;
                 let name_and_type = fieldref.name_and_type_index;
@@ -137,6 +142,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::FieldRefNodeNotPointingToNameAndType),
                 }
             }
+
             CpNode::MethodRef(methodref) => {
                 let class_index = methodref.class_index;
                 let name_and_type = methodref.name_and_type_index;
@@ -153,6 +159,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::MethodRefNodeNotPointingToNameAndType),
                 }
             }
+
             CpNode::InterfaceMethodRef(interfacemethodref) => {
                 let class_index = interfacemethodref.class_index;
                 let name_and_type = interfacemethodref.name_and_type_index;
@@ -169,6 +176,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::InterfaceMethodRefNodeNotPointingToNameAndType),
                 }
             }
+
             CpNode::String(string) => {
                 let node = &cp[string.string_index.to_u2() as usize - 1];
                 match node {
@@ -176,6 +184,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::StringNodeNotPointingToUtf8),
                 };
             }
+
             CpNode::MethodType(methodtype) => {
                 let node = &cp[methodtype.descriptor_index.to_u2() as usize - 1];
                 match node {
@@ -183,6 +192,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::MethodTypeNodeNotPointingToUtf8),
                 };
             }
+
             CpNode::Module(module) => {
                 let node = &cp[module.name_index.to_u2() as usize - 1];
                 match node {
@@ -190,6 +200,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::ModuleNodeNotPointingToUtf8),
                 };
             }
+
             CpNode::Package(package) => {
                 let package = &cp[package.name_index.to_u2() as usize - 1];
                 match package {
@@ -197,6 +208,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::PackageNodeNotPointingToUtf8),
                 };
             }
+
             CpNode::Dynamic(dynamic) => {
                 let bootstrap_method_attr_index = dynamic.bootstrap_method_attr_index.to_u2();
 
@@ -219,6 +231,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::DynamicNotPointingToNameAndType),
                 };
             }
+
             CpNode::NameAndType(nameandtype) => {
                 let name_index = nameandtype.name_index.to_u2();
 
@@ -228,6 +241,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::PackageNodeNotPointingToUtf8),
                 };
             }
+
             CpNode::InvokeDynamic(dynamic) => {
                 let bootstrap_method_attr_index = dynamic.bootstrap_method_attr_index.to_u2();
 
@@ -250,6 +264,7 @@ impl<'a> Verifier<'a> {
                     _ => return Err(ParsingError::InvokeDynamicNotPointingToNameAndType),
                 };
             }
+
             CpNode::MethodHandle(methodhandle) => {
                 let reference_kind = &methodhandle.reference_kind;
                 let reference_index = methodhandle.reference_index.to_u2();
@@ -270,6 +285,7 @@ impl<'a> Verifier<'a> {
                     };
                 }
             }
+
             _ => {}
         };
 
