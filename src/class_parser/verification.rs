@@ -1,3 +1,4 @@
+use super::errors::CpNodeError;
 use super::{Attributes, BootStrapMethods, ClassFile, CpNode, ParsingError};
 
 pub struct Verifier<'a> {
@@ -6,14 +7,17 @@ pub struct Verifier<'a> {
 }
 
 impl<'a> Verifier<'a> {
+    fn assert_covariant(x: Verifier<'static>) -> Verifier<'a> {
+        x
+    }
+
     pub fn new(class: &'a ClassFile<'a>) -> Self {
         let bootstrap_methods = class
             .attributes
             .iter()
-            .filter(|x| matches!(x, Attributes::BootstrapMethods(..)))
-            .map(|y| match y {
-                Attributes::BootstrapMethods(z) => z,
-                _ => unreachable!(),
+            .filter_map(|x| match x {
+                Attributes::BootstrapMethods(z) => Some(z),
+                _ => None,
             })
             .collect::<Vec<_>>();
 
@@ -23,7 +27,7 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn verify(self) -> Result<&'a ClassFile<'a>, ParsingError> {
+    pub fn verify(&self) -> Result<&'a ClassFile<'a>, ParsingError<'a>> {
         let class = self.class;
 
         let major_v = class.major_v.to_u2();
@@ -106,23 +110,25 @@ impl<'a> Verifier<'a> {
             */
         }
 
-        Ok(class)
+        Ok(self.class)
     }
 
-    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError> {
+    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>> {
         let cp = &self.class.cp;
         let bootstrap_methods = &self.bootstrap_methods;
 
         match node {
             CpNode::Class(class) => {
                 let node = &cp[class.name_index.to_u2() as usize - 1];
-                match node {
-                    CpNode::Utf8(string) => {
-                        string.verify_binary_class_or_interface_name()?;
-                        self.verify_cp_node(node)?;
-                    }
-
-                    _ => return Err(ParsingError::ClassNodeNotPointingToUtf8),
+                if let CpNode::Utf8(string) = node {
+                    string.verify_binary_class_or_interface_name()?;
+                    self.verify_cp_node(node)?;
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::Class,
+                        CpNodeError::Utf8,
+                        "name_index",
+                    ));
                 };
             }
 
@@ -131,15 +137,25 @@ impl<'a> Verifier<'a> {
                 let name_and_type = fieldref.name_and_type_index;
 
                 let node = &cp[class_index.to_u2() as usize - 1];
-                match node {
-                    CpNode::Class(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::FieldRefNodeNotPointingToClass),
+                if let CpNode::Class(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::FieldRef,
+                        CpNodeError::Class,
+                        "class_index",
+                    ));
                 };
 
                 let node = &cp[name_and_type.to_u2() as usize - 1];
-                match node {
-                    CpNode::NameAndType(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::FieldRefNodeNotPointingToNameAndType),
+                if let CpNode::NameAndType(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::FieldRef,
+                        CpNodeError::NameAndType,
+                        "name_and_type",
+                    ));
                 }
             }
 
@@ -148,15 +164,25 @@ impl<'a> Verifier<'a> {
                 let name_and_type = methodref.name_and_type_index;
 
                 let node = &cp[class_index.to_u2() as usize - 1];
-                match node {
-                    CpNode::Class(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::MethodRefNodeNotPointingToClass),
+                if let CpNode::Class(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::MethodRef,
+                        CpNodeError::Class,
+                        "class_index",
+                    ));
                 };
 
                 let node = &cp[name_and_type.to_u2() as usize - 1];
-                match node {
-                    CpNode::NameAndType(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::MethodRefNodeNotPointingToNameAndType),
+                if let CpNode::NameAndType(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::MethodRef,
+                        CpNodeError::NameAndType,
+                        "name_and_type",
+                    ));
                 }
             }
 
@@ -165,47 +191,77 @@ impl<'a> Verifier<'a> {
                 let name_and_type = interfacemethodref.name_and_type_index;
 
                 let node = &cp[class_index.to_u2() as usize - 1];
-                match node {
-                    CpNode::Class(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::InterfaceMethodRefNodeNotPointingToClass),
+                if let CpNode::Class(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::InterfaceMethodRef,
+                        CpNodeError::Class,
+                        "class_index",
+                    ));
                 };
 
                 let node = &cp[name_and_type.to_u2() as usize - 1];
-                match node {
-                    CpNode::NameAndType(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::InterfaceMethodRefNodeNotPointingToNameAndType),
+                if let CpNode::NameAndType(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::InterfaceMethodRef,
+                        CpNodeError::NameAndType,
+                        "name_and_type",
+                    ));
                 }
             }
 
             CpNode::String(string) => {
                 let node = &cp[string.string_index.to_u2() as usize - 1];
-                match node {
-                    CpNode::Utf8(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::StringNodeNotPointingToUtf8),
+                if let CpNode::Utf8(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::String,
+                        CpNodeError::Utf8,
+                        "string_index",
+                    ));
                 };
             }
 
             CpNode::MethodType(methodtype) => {
                 let node = &cp[methodtype.descriptor_index.to_u2() as usize - 1];
-                match node {
-                    CpNode::Utf8(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::MethodTypeNodeNotPointingToUtf8),
+                if let CpNode::Utf8(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::MethodType,
+                        CpNodeError::Utf8,
+                        "descriptor_index",
+                    ));
                 };
             }
 
             CpNode::Module(module) => {
                 let node = &cp[module.name_index.to_u2() as usize - 1];
-                match node {
-                    CpNode::Utf8(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::ModuleNodeNotPointingToUtf8),
+                if let CpNode::Utf8(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::Module,
+                        CpNodeError::Utf8,
+                        "name_index",
+                    ));
                 };
             }
 
             CpNode::Package(package) => {
                 let package = &cp[package.name_index.to_u2() as usize - 1];
-                match package {
-                    CpNode::Utf8(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::PackageNodeNotPointingToUtf8),
+                if let CpNode::Utf8(_) = package {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::Package,
+                        CpNodeError::Utf8,
+                        "name_index",
+                    ));
                 };
             }
 
@@ -226,9 +282,14 @@ impl<'a> Verifier<'a> {
 
                 let name_and_type_index = dynamic.name_and_type_index.to_u2();
                 let node = &cp[name_and_type_index as usize - 1];
-                match node {
-                    CpNode::NameAndType(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::DynamicNotPointingToNameAndType),
+                if let CpNode::NameAndType(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::Dynamic,
+                        CpNodeError::NameAndType,
+                        "name_and_type_index",
+                    ));
                 };
             }
 
@@ -236,9 +297,14 @@ impl<'a> Verifier<'a> {
                 let name_index = nameandtype.name_index.to_u2();
 
                 let node = &cp[name_index as usize - 1];
-                match node {
-                    CpNode::Utf8(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::PackageNodeNotPointingToUtf8),
+                if let CpNode::Utf8(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::NameAndType,
+                        CpNodeError::Utf8,
+                        "name_index",
+                    ));
                 };
             }
 
@@ -259,9 +325,14 @@ impl<'a> Verifier<'a> {
 
                 let name_and_type_index = dynamic.name_and_type_index.to_u2();
                 let node = &cp[name_and_type_index as usize - 1];
-                match node {
-                    CpNode::NameAndType(_) => self.verify_cp_node(node)?,
-                    _ => return Err(ParsingError::InvokeDynamicNotPointingToNameAndType),
+                if let CpNode::NameAndType(_) = node {
+                    self.verify_cp_node(node)?
+                } else {
+                    return Err(ParsingError::InvalidIndexFromNodeToNode(
+                        CpNodeError::InvokeDynamic,
+                        CpNodeError::NameAndType,
+                        "name_and_type_index",
+                    ));
                 };
             }
 
@@ -273,15 +344,17 @@ impl<'a> Verifier<'a> {
                     return Err(ParsingError::InvalidReferenceKind);
                 } else if (1..=4).contains(reference_kind) {
                     let node = &cp[reference_index as usize - 1];
-                    match node {
-                        CpNode::FieldRef(_) => self.verify_cp_node(node)?,
-                        _ => return Err(ParsingError::MethodHandle1to4NotPointingToFieldRef),
+                    if let CpNode::FieldRef(_) = node {
+                        self.verify_cp_node(node)?
+                    } else {
+                        return Err(ParsingError::MethodHandle1to4NotPointingToFieldRef);
                     };
                 } else if reference_kind == &5 || reference_kind == &8 {
                     let node = &cp[reference_index as usize - 1];
-                    match node {
-                        CpNode::MethodRef(_) => self.verify_cp_node(node)?,
-                        _ => return Err(ParsingError::MethodHandle5or8NotPointingToMethodRef),
+                    if let CpNode::MethodRef(_) = node {
+                        self.verify_cp_node(node)?
+                    } else {
+                        return Err(ParsingError::MethodHandle5or8NotPointingToMethodRef);
                     };
                 }
             }
