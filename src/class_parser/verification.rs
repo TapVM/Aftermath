@@ -1,22 +1,19 @@
 use super::errors::CpNodeError;
-use super::{Attributes, BootStrapMethods, ClassFile, CpNode, ParsingError};
+use super::{Attributes, ClassFile, CpNode, ParsingError};
 
 pub struct Verifier<'a> {
-    class: &'a ClassFile<'a>,
-    bootstrap_methods: Vec<&'a BootStrapMethods<'a>>,
+    class: ClassFile<'a>,
+    bootstrap_methods: Vec<usize>,
 }
 
 impl<'a> Verifier<'a> {
-    fn assert_covariant(x: Verifier<'static>) -> Verifier<'a> {
-        x
-    }
-
-    pub fn new(class: &'a ClassFile<'a>) -> Self {
+    pub fn new(class: ClassFile<'a>) -> Self {
         let bootstrap_methods = class
             .attributes
             .iter()
-            .filter_map(|x| match x {
-                Attributes::BootstrapMethods(z) => Some(z),
+            .enumerate()
+            .filter_map(|x| match x.1 {
+                Attributes::BootstrapMethods(_) => Some(x.0),
                 _ => None,
             })
             .collect::<Vec<_>>();
@@ -27,8 +24,8 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn verify(&self) -> Result<&'a ClassFile<'a>, ParsingError<'a>> {
-        let class = self.class;
+    pub fn verify(self) -> Result<ClassFile<'a>, ParsingError<'a>> {
+        let class = &self.class;
 
         let major_v = class.major_v.to_u2();
         let minor_v = class.minor_v.to_u2();
@@ -270,10 +267,13 @@ impl<'a> Verifier<'a> {
 
                 if bootstrap_methods.len() != 1 {
                     return Err(ParsingError::InvalidAmountOfBootStrapMethodsInClass);
-                } else if bootstrap_methods[0]
-                    .bootstrap_methods
-                    .get(bootstrap_method_attr_index as usize)
-                    .is_none()
+                } else if match &self.class.attributes[bootstrap_methods[0]] {
+                    Attributes::BootstrapMethods(z) => z,
+                    _ => unreachable!(),
+                }
+                .bootstrap_methods
+                .get(bootstrap_method_attr_index as usize)
+                .is_none()
                 {
                     return Err(
                         ParsingError::BootstrapMethodAttrIndexInDynamicAttributeIsNotValidIndex,
@@ -313,10 +313,13 @@ impl<'a> Verifier<'a> {
 
                 if bootstrap_methods.len() != 1 {
                     return Err(ParsingError::InvalidAmountOfBootStrapMethodsInClass);
-                } else if bootstrap_methods[0]
-                    .bootstrap_methods
-                    .get(bootstrap_method_attr_index as usize)
-                    .is_none()
+                } else if match &self.class.attributes[bootstrap_methods[0]] {
+                    Attributes::BootstrapMethods(z) => z,
+                    _ => unreachable!(),
+                }
+                .bootstrap_methods
+                .get(bootstrap_method_attr_index as usize)
+                .is_none()
                 {
                     return Err(
                             ParsingError::BootstrapMethodAttrIndexInInvokeDynamicAttributeIsNotValidIndex,

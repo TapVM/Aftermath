@@ -19,10 +19,10 @@ fn main() -> Result<()> {
         "/class_basket/UsingToStringOrdering.class"
     ));
 
-    let parser = &mut Parser::new(file);
+    let mut parser = Parser::new(file);
     let parsed = parser.parse()?;
 
-    let verification = Verifier::new(&parsed);
+    let verification = Verifier::new(parsed);
     dbg!(verification.verify()?);
 
     Ok(())
