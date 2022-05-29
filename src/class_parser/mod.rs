@@ -8,7 +8,6 @@ use std::fmt::Debug;
 
 type U1 = u8;
 type U4 = u32;
-type Result<T, E = ParsingError> = core::result::Result<T, E>;
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -709,7 +708,7 @@ pub struct Parser<'class> {
 }
 
 impl<'class> Utf8<'class> {
-    fn verify_binary_class_or_interface_name(&self) -> Result<()> {
+    fn verify_binary_class_or_interface_name(&self) -> Result<(), ParsingError<'class>> {
         for char in self.bytes.chars() {
             if char == '.' {
                 return Err(ParsingError::BinaryNameContainsDot);
@@ -761,7 +760,7 @@ impl<'class> Parser<'class> {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
-    fn element_value(&mut self) -> Result<ElementValue> {
+    fn element_value(&mut self) -> Result<ElementValue, ParsingError<'class>> {
         let tag = self.u1();
 
         match tag as char {
@@ -800,7 +799,7 @@ impl<'class> Parser<'class> {
         }
     }
 
-    fn annotation(&mut self) -> Result<Annotation> {
+    fn annotation(&mut self) -> Result<Annotation, ParsingError<'class>> {
         let type_index = self.u2();
         let num_element_value_pairs = self.u2();
         let mut element_value_pairs = Vec::with_capacity(num_element_value_pairs.to_u2().into());
@@ -821,7 +820,7 @@ impl<'class> Parser<'class> {
         })
     }
 
-    fn annotation_range(&mut self, length: u16) -> Result<Vec<Annotation>> {
+    fn annotation_range(&mut self, length: u16) -> Result<Vec<Annotation>, ParsingError<'class>> {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
@@ -831,7 +830,7 @@ impl<'class> Parser<'class> {
         Ok(annotations)
     }
 
-    fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>> {
+    fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>, ParsingError<'class>> {
         let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
 
         while cp.len() + 1 < length as usize {
@@ -990,7 +989,7 @@ impl<'class> Parser<'class> {
         Ok(cp)
     }
 
-    pub fn type_annotation(&mut self) -> Result<TypeAnnotation> {
+    pub fn type_annotation(&mut self) -> Result<TypeAnnotation, ParsingError<'class>> {
         let target_type = self.u1();
         let target_info = match target_type {
             0x00 | 0x01 => {
@@ -1105,7 +1104,10 @@ impl<'class> Parser<'class> {
         })
     }
 
-    fn type_annotation_range(&mut self, length: u16) -> Result<Vec<TypeAnnotation>> {
+    fn type_annotation_range(
+        &mut self,
+        length: u16,
+    ) -> Result<Vec<TypeAnnotation>, ParsingError<'class>> {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
@@ -1115,7 +1117,7 @@ impl<'class> Parser<'class> {
         Ok(annotations)
     }
 
-    fn stackmapframe(&mut self) -> Result<StackMapFrame> {
+    fn stackmapframe(&mut self) -> Result<StackMapFrame, ParsingError<'class>> {
         let frame_type = self.u1();
 
         match frame_type {
@@ -1189,7 +1191,7 @@ impl<'class> Parser<'class> {
         }
     }
 
-    fn verification_type_info(&mut self) -> Result<VerificationTypeInfo> {
+    fn verification_type_info(&mut self) -> Result<VerificationTypeInfo, ParsingError<'class>> {
         let tag = self.u1();
 
         Ok(match tag {
@@ -1216,7 +1218,11 @@ impl<'class> Parser<'class> {
         })
     }
 
-    fn attributes(&mut self, length: u16, cp: &Vec<CpNode>) -> Result<Vec<Attributes<'class>>> {
+    fn attributes(
+        &mut self,
+        length: u16,
+        cp: &Vec<CpNode>,
+    ) -> Result<Vec<Attributes<'class>>, ParsingError<'class>> {
         let mut attributes = Vec::with_capacity(length as usize);
 
         while attributes.len() < length as usize {
@@ -1686,7 +1692,7 @@ impl<'class> Parser<'class> {
         &mut self,
         length: u16,
         cp: &Vec<CpNode<'class>>,
-    ) -> Result<Vec<MethodInfo<'class>>> {
+    ) -> Result<Vec<MethodInfo<'class>>, ParsingError<'class>> {
         let mut methods = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -1706,7 +1712,11 @@ impl<'class> Parser<'class> {
         Ok(methods)
     }
 
-    fn fields(&mut self, length: u16, cp: &Vec<CpNode<'class>>) -> Result<Vec<FieldInfo<'class>>> {
+    fn fields(
+        &mut self,
+        length: u16,
+        cp: &Vec<CpNode<'class>>,
+    ) -> Result<Vec<FieldInfo<'class>>, ParsingError<'class>> {
         let mut fields = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -1727,7 +1737,7 @@ impl<'class> Parser<'class> {
         Ok(fields)
     }
 
-    pub fn parse(&mut self) -> Result<ClassFile<'class>> {
+    pub fn parse(&mut self) -> Result<ClassFile<'class>, ParsingError<'class>> {
         let magic = self.u4();
 
         if magic != 0xCAFEBABE {
