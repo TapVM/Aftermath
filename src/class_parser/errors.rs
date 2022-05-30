@@ -102,4 +102,8 @@ pub enum ParsingError<'a> {
     MethodHandle5or8NotPointingToMethodRef,
     #[error("Malformed class -> A {0:?} node in the constant pool did not point to a {1:?} node in the constant pool in the {2} field, which is illegal.")]
     InvalidIndexFromNodeToNode(CpNodeError, CpNodeError, &'a str),
+    #[error("Malformed class -> This class file is a module, but it either
+    • Did not have a Module attribute
+    • Contained attributes aside Module, ModulePackages, ModuleMainClass, InnerClass, SourceFile, SourceDebugExt, RuntimeVisibleAnnotations, RuntimeInvisibleAnnotations")]
+    InvalidAttributesAsModule,
 }

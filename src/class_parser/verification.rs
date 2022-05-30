@@ -97,14 +97,24 @@ impl<'a> Verifier<'a> {
                 return Err(ParsingError::VarsNotZeroAsModule);
             }
 
-            // TODO
-            /*
-                • attributes: One Module attribute must be present. Except
-                for Module, ModulePackages, ModuleMainClass, InnerClasses,
-                SourceFile, SourceDebugExtension, RuntimeVisibleAnnotations, and
-                RuntimeInvisibleAnnotations, none of the pre-defined attributes (§4.7) may
-                appear.
-            */
+            let mut filtered = self.class.attributes.iter().filter(|z| match z {
+                Attributes::Module(..)
+                | Attributes::ModulePackages(..)
+                | Attributes::ModuleMainClass(..)
+                | Attributes::InnerClass(..)
+                | Attributes::SourceFile(..)
+                | Attributes::SourceDebugExt(..)
+                | Attributes::RuntimeVisibleAnnotations(..)
+                | Attributes::RuntimeInvisibleAnnotations(..) => false,
+
+                _ => true,
+            });
+
+            let has_module = filtered.any(|x| matches!(x, Attributes::Module(..)));
+
+            if !(filtered.next().is_none() && has_module) {
+                return Err(ParsingError::InvalidAttributesAsModule);
+            }
         }
 
         Ok(self.class)
