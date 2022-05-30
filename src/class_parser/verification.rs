@@ -97,17 +97,18 @@ impl<'a> Verifier<'a> {
                 return Err(ParsingError::VarsNotZeroAsModule);
             }
 
-            let mut filtered = self.class.attributes.iter().filter(|z| match z {
-                Attributes::Module(..)
-                | Attributes::ModulePackages(..)
-                | Attributes::ModuleMainClass(..)
-                | Attributes::InnerClass(..)
-                | Attributes::SourceFile(..)
-                | Attributes::SourceDebugExt(..)
-                | Attributes::RuntimeVisibleAnnotations(..)
-                | Attributes::RuntimeInvisibleAnnotations(..) => false,
-
-                _ => true,
+            let mut filtered = self.class.attributes.iter().filter(|z| {
+                matches!(
+                    z,
+                    Attributes::Module(..)
+                        | Attributes::ModulePackages(..)
+                        | Attributes::ModuleMainClass(..)
+                        | Attributes::InnerClass(..)
+                        | Attributes::SourceFile(..)
+                        | Attributes::SourceDebugExt(..)
+                        | Attributes::RuntimeVisibleAnnotations(..)
+                        | Attributes::RuntimeInvisibleAnnotations(..)
+                )
             });
 
             let has_module = filtered.any(|x| matches!(x, Attributes::Module(..)));
