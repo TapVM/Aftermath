@@ -1,4 +1,5 @@
 use super::errors::CpNodeError;
+use super::ErrorAttributes;
 use super::{Attributes, ClassFile, CpNode, ParsingError};
 
 pub struct Verifier<'a> {
@@ -119,6 +120,67 @@ impl<'a> Verifier<'a> {
         }
 
         Ok(self.class)
+    }
+
+    fn verify_attributes(&self) -> Result<(), ParsingError<'a>> {
+        let attributes = &self.class.attributes;
+        let cp = &self.class.cp;
+
+        for attribute in attributes {
+            match attribute {
+                Attributes::Value(cv) => match cp[cv.value_index.to_u2() as usize] {
+                    CpNode::Integer(_)
+                    | CpNode::Float(_)
+                    | CpNode::Long(_)
+                    | CpNode::Double(_)
+                    | CpNode::String(_) => {}
+                    _ => {
+                        return Err(ParsingError::InvalidIndexFromAttributeToNodes(
+                            ErrorAttributes::Value,
+                            &[
+                                CpNodeError::Integer,
+                                CpNodeError::Float,
+                                CpNodeError::Long,
+                                CpNodeError::Double,
+                                CpNodeError::String,
+                            ],
+                            "value_index",
+                        ))
+                    }
+                },
+                Attributes::Code(_) => todo!(),
+                Attributes::StackMapTable(_) => todo!(),
+                Attributes::Exceptions(_) => todo!(),
+                Attributes::InnerClass(_) => todo!(),
+                Attributes::EnclosingMethod(_) => todo!(),
+                Attributes::Synthetic(_) => todo!(),
+                Attributes::Signature(_) => todo!(),
+                Attributes::SourceFile(_) => todo!(),
+                Attributes::SourceDebugExt(_) => todo!(),
+                Attributes::LineNumberTable(_) => todo!(),
+                Attributes::LocalVariableTable(_) => todo!(),
+                Attributes::LocalVariableTypeTable(_) => todo!(),
+                Attributes::Deprecated(_) => todo!(),
+                Attributes::RuntimeVisibleAnnotations(_) => todo!(),
+                Attributes::RuntimeInvisibleAnnotations(_) => todo!(),
+                Attributes::RuntimeVisibleParameterAnnotations(_) => todo!(),
+                Attributes::RuntimeInvisibleParameterAnnotations(_) => todo!(),
+                Attributes::RuntimeVisibleTypeAnnotations(_) => todo!(),
+                Attributes::RuntimeInvisibleTypeAnnotations(_) => todo!(),
+                Attributes::AnnotationDefault(_) => todo!(),
+                Attributes::BootstrapMethods(_) => todo!(),
+                Attributes::MethodParameters(_) => todo!(),
+                Attributes::Module(_) => todo!(),
+                Attributes::ModulePackages(_) => todo!(),
+                Attributes::ModuleMainClass(_) => todo!(),
+                Attributes::NestHost(_) => todo!(),
+                Attributes::NestMembers(_) => todo!(),
+                Attributes::Record(_) => todo!(),
+                Attributes::PermittedSubclasses(_) => todo!(),
+            }
+        }
+
+        Ok(())
     }
 
     fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>> {

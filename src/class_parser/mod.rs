@@ -3,6 +3,7 @@
 mod errors;
 pub mod verification;
 
+pub use errors::Attributes as ErrorAttributes;
 pub use errors::ParsingError;
 use std::fmt::Debug;
 
