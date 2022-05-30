@@ -765,11 +765,11 @@ impl<'class> Parser<'class> {
         let tag = self.u1();
 
         match tag as char {
-            'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 's' | 'Z' => {
+            | 'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 's' | 'Z' => {
                 Ok(ElementValue::ConstValueIndex(self.u2()))
             }
 
-            'e' => {
+            | 'e' => {
                 let type_name_index = self.u2();
                 let const_name_index = self.u2();
 
@@ -779,11 +779,11 @@ impl<'class> Parser<'class> {
                 }))
             }
 
-            'c' => Ok(ElementValue::ClassInfoIndex(self.u2())),
+            | 'c' => Ok(ElementValue::ClassInfoIndex(self.u2())),
 
-            '@' => Ok(ElementValue::AnnotationValue(self.annotation()?)),
+            | '@' => Ok(ElementValue::AnnotationValue(self.annotation()?)),
 
-            '[' => {
+            | '[' => {
                 let length = self.u2();
                 let mut values = Vec::with_capacity(length.to_u2().into());
 
@@ -796,7 +796,7 @@ impl<'class> Parser<'class> {
                 }))
             }
 
-            _ => Err(ParsingError::InvalidElementValue(tag as char)),
+            | _ => Err(ParsingError::InvalidElementValue(tag as char)),
         }
     }
 
@@ -838,7 +838,7 @@ impl<'class> Parser<'class> {
             let tag = self.u1();
 
             match tag {
-                1 => {
+                | 1 => {
                     let length = self.u2();
                     let bytes = self.u1_range(length.to_u2().into());
 
@@ -849,13 +849,13 @@ impl<'class> Parser<'class> {
                     }))
                 }
 
-                7 => {
+                | 7 => {
                     let name_index = self.u2();
 
                     cp.push(CpNode::Class(Class { name_index }))
                 }
 
-                9 => {
+                | 9 => {
                     let class_index = self.u2();
                     let name_and_type_index = self.u2();
 
@@ -865,7 +865,7 @@ impl<'class> Parser<'class> {
                     }))
                 }
 
-                10 => {
+                | 10 => {
                     let class_index = self.u2();
                     let name_and_type_index = self.u2();
 
@@ -875,7 +875,7 @@ impl<'class> Parser<'class> {
                     }))
                 }
 
-                11 => {
+                | 11 => {
                     let class_index = self.u2();
                     let name_and_type_index = self.u2();
 
@@ -885,23 +885,23 @@ impl<'class> Parser<'class> {
                     }))
                 }
 
-                8 => {
+                | 8 => {
                     let string_index = self.u2();
 
                     cp.push(CpNode::String(StringCp { string_index }));
                 }
 
-                3 => {
+                | 3 => {
                     let bytes = self.u4();
                     cp.push(CpNode::Integer(Integer { bytes }));
                 }
 
-                4 => {
+                | 4 => {
                     let bytes = self.u4();
                     cp.push(CpNode::Float(Float { bytes }));
                 }
 
-                5 => {
+                | 5 => {
                     let high_bytes = self.u4();
                     let low_bytes = self.u4();
 
@@ -913,7 +913,7 @@ impl<'class> Parser<'class> {
                     cp.push(CpNode::None);
                 }
 
-                6 => {
+                | 6 => {
                     let high_bytes = self.u4();
                     let low_bytes = self.u4();
 
@@ -925,7 +925,7 @@ impl<'class> Parser<'class> {
                     cp.push(CpNode::None);
                 }
 
-                12 => {
+                | 12 => {
                     let name_index = self.u2();
                     let descriptor_index = self.u2();
 
@@ -935,7 +935,7 @@ impl<'class> Parser<'class> {
                     }))
                 }
 
-                15 => {
+                | 15 => {
                     let reference_kind = self.u1();
                     let reference_index = self.u2();
 
@@ -945,13 +945,13 @@ impl<'class> Parser<'class> {
                     }))
                 }
 
-                16 => {
+                | 16 => {
                     let descriptor_index = self.u2();
 
                     cp.push(CpNode::MethodType(MethodType { descriptor_index }))
                 }
 
-                17 => {
+                | 17 => {
                     let bootstrap_method_attr_index = self.u2();
                     let name_and_type_index = self.u2();
 
@@ -961,7 +961,7 @@ impl<'class> Parser<'class> {
                     }));
                 }
 
-                18 => {
+                | 18 => {
                     let bootstrap_method_attr_index = self.u2();
                     let name_and_type_index = self.u2();
 
@@ -971,19 +971,19 @@ impl<'class> Parser<'class> {
                     }));
                 }
 
-                19 => {
+                | 19 => {
                     let name_index = self.u2();
 
                     cp.push(CpNode::Module(ModuleCp { name_index }))
                 }
 
-                20 => {
+                | 20 => {
                     let name_index = self.u2();
 
                     cp.push(CpNode::Package(Package { name_index }))
                 }
 
-                _ => return Err(ParsingError::ConstantPoolTag(tag)),
+                | _ => return Err(ParsingError::ConstantPoolTag(tag)),
             }
         }
 
@@ -993,17 +993,17 @@ impl<'class> Parser<'class> {
     pub fn type_annotation(&mut self) -> Result<TypeAnnotation, ParsingError<'class>> {
         let target_type = self.u1();
         let target_info = match target_type {
-            0x00 | 0x01 => {
+            | 0x00 | 0x01 => {
                 let type_parameter_index = self.u1();
                 TargetInfo::TypeParameterTarget(TypeParameterTarget {
                     type_parameter_index,
                 })
             }
-            0x10 => {
+            | 0x10 => {
                 let supertype_index = self.u2();
                 TargetInfo::Supertype(Supertype { supertype_index })
             }
-            0x11 | 0x12 => {
+            | 0x11 | 0x12 => {
                 let type_parameter_index = self.u1();
                 let bound_index = self.u1();
 
@@ -1012,19 +1012,19 @@ impl<'class> Parser<'class> {
                     bound_index,
                 })
             }
-            0x13 | 0x14 | 0x15 => TargetInfo::Empty,
-            0x16 => {
+            | 0x13 | 0x14 | 0x15 => TargetInfo::Empty,
+            | 0x16 => {
                 let formal_parameter_index = self.u1();
                 TargetInfo::FormalParameter(FormalParameter {
                     formal_parameter_index,
                 })
             }
-            0x17 => {
+            | 0x17 => {
                 let throws_type_index = self.u1();
 
                 TargetInfo::Throws(Throws { throws_type_index })
             }
-            0x40 | 0x41 => {
+            | 0x40 | 0x41 => {
                 let length = self.u2();
                 let mut table = Vec::with_capacity(length.to_u2().into());
 
@@ -1042,7 +1042,7 @@ impl<'class> Parser<'class> {
                 TargetInfo::Localvar(Localvar { table })
             }
 
-            0x42 => {
+            | 0x42 => {
                 let exception_table_index = self.u2();
 
                 TargetInfo::Catch(Catch {
@@ -1050,13 +1050,13 @@ impl<'class> Parser<'class> {
                 })
             }
 
-            0x43 | 0x44 | 0x45 | 0x46 => {
+            | 0x43 | 0x44 | 0x45 | 0x46 => {
                 let offset = self.u2();
 
                 TargetInfo::Offset(Offset { offset })
             }
 
-            0x47 | 0x48 | 0x49 | 0x4A | 0x4B => {
+            | 0x47 | 0x48 | 0x49 | 0x4A | 0x4B => {
                 let offset = self.u2();
                 let type_argument_index = self.u1();
 
@@ -1065,7 +1065,7 @@ impl<'class> Parser<'class> {
                     type_argument_index,
                 })
             }
-            _ => return Err(ParsingError::InvalidTargetType(target_type)),
+            | _ => return Err(ParsingError::InvalidTargetType(target_type)),
         };
 
         let type_path_length = self.u1();
@@ -1122,14 +1122,14 @@ impl<'class> Parser<'class> {
         let frame_type = self.u1();
 
         match frame_type {
-            0..=63 => Ok(StackMapFrame::SameFrame(SameFrame { frame_type })),
-            64..=127 => Ok(StackMapFrame::SameLocals1StackItemFrame(
+            | 0..=63 => Ok(StackMapFrame::SameFrame(SameFrame { frame_type })),
+            | 64..=127 => Ok(StackMapFrame::SameLocals1StackItemFrame(
                 SameLocals1StackItemFrame {
                     frame_type,
                     stack: self.verification_type_info()?,
                 },
             )),
-            247 => {
+            | 247 => {
                 let offset_delta = self.u2();
                 let stack = self.verification_type_info()?;
 
@@ -1141,15 +1141,15 @@ impl<'class> Parser<'class> {
                     },
                 ))
             }
-            248..=250 => Ok(StackMapFrame::ChopFrame(ChopFrame {
+            | 248..=250 => Ok(StackMapFrame::ChopFrame(ChopFrame {
                 frame_type,
                 offset_delta: self.u2(),
             })),
-            251 => Ok(StackMapFrame::SameFrameExtended(SameFrameExtended {
+            | 251 => Ok(StackMapFrame::SameFrameExtended(SameFrameExtended {
                 frame_type,
                 offset_delta: self.u2(),
             })),
-            252..=254 => {
+            | 252..=254 => {
                 let offset_delta = self.u2();
                 let length = frame_type - 251;
                 let mut locals = Vec::with_capacity(length as usize);
@@ -1164,7 +1164,7 @@ impl<'class> Parser<'class> {
                     locals,
                 }))
             }
-            255 => {
+            | 255 => {
                 let offset_delta = self.u2();
 
                 let length = self.u2();
@@ -1188,7 +1188,7 @@ impl<'class> Parser<'class> {
                     stack,
                 }))
             }
-            _ => Err(ParsingError::InvalidFrameType(frame_type)),
+            | _ => Err(ParsingError::InvalidFrameType(frame_type)),
         }
     }
 
@@ -1196,26 +1196,26 @@ impl<'class> Parser<'class> {
         let tag = self.u1();
 
         Ok(match tag {
-            0 => VerificationTypeInfo::TopVariableInfo(TopVariableInfo { tag }),
-            1 => VerificationTypeInfo::IntegerVariableInfo(IntegerVariableInfo { tag }),
-            2 => VerificationTypeInfo::FloatVariableInfo(FloatVariableInfo { tag }),
-            3 => VerificationTypeInfo::DoubleVariableInfo(DoubleVariableInfo { tag }),
-            4 => VerificationTypeInfo::LongVariableInfo(LongVariableInfo { tag }),
-            5 => VerificationTypeInfo::NullVariableInfo(NullVariableInfo { tag }),
-            6 => {
+            | 0 => VerificationTypeInfo::TopVariableInfo(TopVariableInfo { tag }),
+            | 1 => VerificationTypeInfo::IntegerVariableInfo(IntegerVariableInfo { tag }),
+            | 2 => VerificationTypeInfo::FloatVariableInfo(FloatVariableInfo { tag }),
+            | 3 => VerificationTypeInfo::DoubleVariableInfo(DoubleVariableInfo { tag }),
+            | 4 => VerificationTypeInfo::LongVariableInfo(LongVariableInfo { tag }),
+            | 5 => VerificationTypeInfo::NullVariableInfo(NullVariableInfo { tag }),
+            | 6 => {
                 VerificationTypeInfo::UninitializedThisVariableInfo(UninitializedThisVariableInfo {
                     tag,
                 })
             }
-            7 => VerificationTypeInfo::ObjectVariableInfo(ObjectVariableInfo {
+            | 7 => VerificationTypeInfo::ObjectVariableInfo(ObjectVariableInfo {
                 tag,
                 cp_index: self.u2(),
             }),
-            8 => VerificationTypeInfo::UninitializedVariableInfo(UninitializedVariableInfo {
+            | 8 => VerificationTypeInfo::UninitializedVariableInfo(UninitializedVariableInfo {
                 tag,
                 offset: self.u2(),
             }),
-            _ => Err(ParsingError::InvalidTagVerificationTypeInfo(tag))?,
+            | _ => Err(ParsingError::InvalidTagVerificationTypeInfo(tag))?,
         })
     }
 
@@ -1233,17 +1233,17 @@ impl<'class> Parser<'class> {
 
             if let CpNode::Utf8(tag) = tag {
                 match tag.bytes {
-                    "ConstantValue" => {
+                    | "ConstantValue" => {
                         let value_index = self.u2();
 
                         attributes.push(Attributes::Value(Value { value_index }))
                     }
 
-                    "SourceFile" => attributes.push(Attributes::SourceFile(SourceFile {
+                    | "SourceFile" => attributes.push(Attributes::SourceFile(SourceFile {
                         sourcefile_index: self.u2(),
                     })),
 
-                    "Module" => {
+                    | "Module" => {
                         let module_name_index = self.u2();
                         let module_flags = self.u2();
                         let module_version_index = self.u2();
@@ -1324,7 +1324,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "Code" => {
+                    | "Code" => {
                         let max_stack = self.u2();
                         let max_locals = self.u2();
                         let code_length = self.u4();
@@ -1359,7 +1359,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "LineNumberTable" => {
+                    | "LineNumberTable" => {
                         let line_number_table_length = self.u2();
                         let mut line_number_table =
                             Vec::with_capacity(line_number_table_length.to_u2().into());
@@ -1379,7 +1379,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "StackMapTable" => {
+                    | "StackMapTable" => {
                         let number_of_entries = self.u2();
                         let mut entries = Vec::with_capacity(number_of_entries.to_u2().into());
 
@@ -1390,7 +1390,7 @@ impl<'class> Parser<'class> {
                         attributes.push(Attributes::StackMapTable(StackMapTable { entries }))
                     }
 
-                    "Exceptions" => {
+                    | "Exceptions" => {
                         let number_of_exceptions = self.u2();
                         let exception_index_table =
                             self.u2_range(number_of_exceptions.to_u2().into());
@@ -1400,7 +1400,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "InnerClasses" => {
+                    | "InnerClasses" => {
                         let number_of_classes = self.u2();
                         let mut classes = Vec::with_capacity(number_of_classes.to_u2().into());
 
@@ -1421,7 +1421,7 @@ impl<'class> Parser<'class> {
                         attributes.push(Attributes::InnerClass(InnerClass { classes }))
                     }
 
-                    "EnclosingMethod" => {
+                    | "EnclosingMethod" => {
                         let class_index = self.u2();
                         let method_index = self.u2();
 
@@ -1431,19 +1431,19 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "Synthetic" => attributes.push(Attributes::Synthetic(Synthetic)),
+                    | "Synthetic" => attributes.push(Attributes::Synthetic(Synthetic)),
 
-                    "Signature" => attributes.push(Attributes::Signature(Signature {
+                    | "Signature" => attributes.push(Attributes::Signature(Signature {
                         signature_index: self.u2(),
                     })),
 
-                    "SourceDebugExtension" => {
+                    | "SourceDebugExtension" => {
                         attributes.push(Attributes::SourceDebugExt(SourceDebugExt {
                             debug_extension: self.u1_range(attribute_length),
                         }))
                     }
 
-                    "LocalVariableTable" => {
+                    | "LocalVariableTable" => {
                         let length = self.u2();
                         let mut local_variable_table = Vec::with_capacity(length.to_u2().into());
 
@@ -1468,7 +1468,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "LocalVariableTypeTable" => {
+                    | "LocalVariableTypeTable" => {
                         let length = self.u2();
                         let mut local_variable_type_table =
                             Vec::with_capacity(length.to_u2().into());
@@ -1496,9 +1496,9 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "Deprecated" => attributes.push(Attributes::Deprecated(Deprecated)),
+                    | "Deprecated" => attributes.push(Attributes::Deprecated(Deprecated)),
 
-                    "RuntimeVisibleAnnotations" => {
+                    | "RuntimeVisibleAnnotations" => {
                         let length = self.u2();
                         let annotations = self.annotation_range(length.to_u2())?;
 
@@ -1507,7 +1507,7 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "RuntimeInvisibleAnnotations" => {
+                    | "RuntimeInvisibleAnnotations" => {
                         let length = self.u2();
                         let annotations = self.annotation_range(length.to_u2())?;
 
@@ -1516,7 +1516,7 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "RuntimeVisibleParameterAnnotations" => {
+                    | "RuntimeVisibleParameterAnnotations" => {
                         let length = self.u1();
                         let mut parameter_annotations = Vec::with_capacity(length.into());
 
@@ -1535,7 +1535,7 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "RuntimeInvisibleParameterAnnotations" => {
+                    | "RuntimeInvisibleParameterAnnotations" => {
                         let length = self.u1();
                         let mut parameter_annotations = Vec::with_capacity(length.into());
 
@@ -1554,7 +1554,7 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "RuntimeVisibleTypeAnnotations" => {
+                    | "RuntimeVisibleTypeAnnotations" => {
                         let length = self.u2();
                         let annotations = self.type_annotation_range(length.to_u2())?;
 
@@ -1565,7 +1565,7 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "RuntimeInvisibleTypeAnnotations" => {
+                    | "RuntimeInvisibleTypeAnnotations" => {
                         let length = self.u2();
                         let annotations = self.type_annotation_range(length.to_u2())?;
 
@@ -1574,7 +1574,7 @@ impl<'class> Parser<'class> {
                         ))
                     }
 
-                    "AnnotationDefault" => {
+                    | "AnnotationDefault" => {
                         let default_value = self.element_value()?;
 
                         attributes.push(Attributes::AnnotationDefault(AnnotationDefault {
@@ -1582,7 +1582,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "BootstrapMethods" => {
+                    | "BootstrapMethods" => {
                         let length = self.u2();
                         let mut bootstrap_methods = Vec::with_capacity(length.to_u2().into());
 
@@ -1603,7 +1603,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "MethodParameters" => {
+                    | "MethodParameters" => {
                         let length = self.u1();
                         let mut parameters = Vec::with_capacity(length.into());
 
@@ -1622,7 +1622,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "ModulePackages" => {
+                    | "ModulePackages" => {
                         let package_count = self.u2();
                         let package_index = self.u2_range(package_count.to_u2().into());
 
@@ -1630,7 +1630,7 @@ impl<'class> Parser<'class> {
                             .push(Attributes::ModulePackages(ModulePackages { package_index }))
                     }
 
-                    "ModuleMainClass" => {
+                    | "ModuleMainClass" => {
                         let main_class_index = self.u2();
 
                         attributes.push(Attributes::ModuleMainClass(ModuleMainClass {
@@ -1638,19 +1638,19 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    "NestHost" => {
+                    | "NestHost" => {
                         let host_class_index = self.u2();
 
                         attributes.push(Attributes::NestHost(NestHost { host_class_index }))
                     }
 
-                    "NestMembers" => {
+                    | "NestMembers" => {
                         let number_of_classes = self.u2();
                         let classes = self.u2_range(number_of_classes.to_u2().into());
                         attributes.push(Attributes::NestMembers(NestMembers { classes }))
                     }
 
-                    "Record" => {
+                    | "Record" => {
                         let count = self.u2();
                         let mut components = Vec::with_capacity(count.to_u2().into());
 
@@ -1670,7 +1670,7 @@ impl<'class> Parser<'class> {
                         attributes.push(Attributes::Record(Record { components }))
                     }
 
-                    "PermittedSubclasses" => {
+                    | "PermittedSubclasses" => {
                         let length = self.u2();
                         let classes = self.u2_range(length.to_u2().into());
 
@@ -1679,7 +1679,7 @@ impl<'class> Parser<'class> {
                         }))
                     }
 
-                    _ => return Err(ParsingError::InvalidAttribute(tag.bytes.to_string())),
+                    | _ => return Err(ParsingError::InvalidAttribute(tag.bytes.to_string())),
                 }
             } else {
                 return Err(ParsingError::AttributeNotUtf8);
