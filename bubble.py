@@ -2,14 +2,6 @@
 import sys
 import os
 
-# A bare bones replication of the dbg! macro in Python
-# Just made for easier development
-
-
-def dbg(elem):
-    print(f"DBG ~> {elem}")
-    return elem
-
 RED: str = "\033[91m"
 GREEN: str = "\033[92m"
 RESET: str = "\033[0m"
