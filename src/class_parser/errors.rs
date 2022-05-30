@@ -24,6 +24,40 @@ pub enum CpNodeError {
     None,
 }
 
+#[derive(Debug)]
+pub enum Attributes {
+    Value,
+    Code,
+    StackMapTable,
+    Exceptions,
+    InnerClass,
+    EnclosingMethod,
+    Synthetic,
+    Signature,
+    SourceFile,
+    SourceDebugExt,
+    LineNumberTable,
+    LocalVariableTable,
+    LocalVariableTypeTable,
+    Deprecated,
+    RuntimeVisibleAnnotations,
+    RuntimeInvisibleAnnotations,
+    RuntimeVisibleParameterAnnotations,
+    RuntimeInvisibleParameterAnnotations,
+    RuntimeVisibleTypeAnnotations,
+    RuntimeInvisibleTypeAnnotations,
+    AnnotationDefault,
+    BootstrapMethods,
+    MethodParameters,
+    Module,
+    ModulePackages,
+    ModuleMainClass,
+    NestHost,
+    NestMembers,
+    Record,
+    PermittedSubclasses,
+}
+
 #[derive(Error, Debug)]
 pub enum ParsingError<'a> {
     // Parsing errors.
@@ -88,20 +122,28 @@ pub enum ParsingError<'a> {
     • fields_count
     • methods_count")]
     VarsNotZeroAsModule,
+
     #[error("Malformed class -> The class has one (or both) of the Dynamic and InvokeDynamic attributes, but it doesn't contain a valid amount of BootstrapMethods (There must only be 1), which is illegal.")]
     InvalidAmountOfBootStrapMethodsInClass,
     #[error("Malformed class -> The bootstrap_method_attr_index given by a Dynamic constant pool node was not a valid index into bootstrap_methods, which is illegal.")]
     BootstrapMethodAttrIndexInDynamicAttributeIsNotValidIndex,
-    #[error("Malformed class -> Malformed class -> The bootstrap_method_attr_index given by an InvokeDynamic constant pool node was not a valid index into bootstrap_methods, which is illegal.")]
+    #[error("Malformed class -> The bootstrap_method_attr_index given by an InvokeDynamic constant pool node was not a valid index into bootstrap_methods, which is illegal.")]
     BootstrapMethodAttrIndexInInvokeDynamicAttributeIsNotValidIndex,
+
     #[error("Malformed class -> The value of reference_kind in a MethodHandle constant pool node wasn't in range (1..=9), which is illegal.")]
     InvalidReferenceKind,
     #[error("Malformed class -> The value of reference_kind in a MethodHandle constant pool node was in the range 1..=4, but the reference_index didn't point to a FieldRef, which is illegal.")]
     MethodHandle1to4NotPointingToFieldRef,
     #[error("Malformed class -> The value of reference_kind in a MethodHandle constant pool node was either 5 or 8, but the reference_index didn't point to a MethodRef, which is illegal.")]
     MethodHandle5or8NotPointingToMethodRef,
+
     #[error("Malformed class -> A {0:?} node in the constant pool did not point to a {1:?} node in the constant pool in the {2} field, which is illegal.")]
     InvalidIndexFromNodeToNode(CpNodeError, CpNodeError, &'a str),
+    #[error("Malformed class -> A {0:?} attribute in the constant pool did not point to a {1:?} node in the constant pool in the {2} field, which is illegal.")]
+    InvalidIndexFromAttributeToNode(Attributes, Attributes, &'a str),
+    #[error("Malformed class -> A {0:?} attribute in the constant pool did not point to any of {1:?} nodes in the constant pool in the {2} field, which is illegal.")]
+    InvalidIndexFromAttributeToNodes(Attributes, &'a [CpNodeError], &'a str),
+
     #[error("Malformed class -> This class file is a module, but it either
     • Did not have a Module attribute
     • Contained attributes aside Module, ModulePackages, ModuleMainClass, InnerClass, SourceFile, SourceDebugExt, RuntimeVisibleAnnotations, RuntimeInvisibleAnnotations")]
