@@ -140,7 +140,7 @@ pub enum ParsingError<'a> {
     #[error("Malformed class -> A {0:?} node in the constant pool did not point to a {1:?} node in the constant pool in the {2} field, which is illegal.")]
     InvalidIndexFromNodeToNode(CpNodeError, CpNodeError, &'a str),
     #[error("Malformed class -> A {0:?} attribute in the constant pool did not point to a {1:?} node in the constant pool in the {2} field, which is illegal.")]
-    InvalidIndexFromAttributeToNode(Attributes, Attributes, &'a str),
+    InvalidIndexFromAttributeToNode(Attributes, CpNodeError, &'a str),
     #[error("Malformed class -> A {0:?} attribute in the constant pool did not point to any of {1:?} nodes in the constant pool in the {2} field, which is illegal.")]
     InvalidIndexFromAttributeToNodes(Attributes, &'a [CpNodeError], &'a str),
 
@@ -148,4 +148,13 @@ pub enum ParsingError<'a> {
     • Did not have a Module attribute
     • Contained attributes aside Module, ModulePackages, ModuleMainClass, InnerClass, SourceFile, SourceDebugExt, RuntimeVisibleAnnotations, RuntimeInvisibleAnnotations")]
     InvalidAttributesAsModule,
+
+    #[error("Malformed class -> The Code attribute in the class had an invalid code_length, it shouldn't be larger than 65536 or equal to 0.")]
+    CodeAttributeCodeLength,
+    #[error("Malformed class -> The Code attribute in the class had invalid values of either (or all) of the following fields, they must be valid indexes into the code array, but they weren't.
+    • start_pc
+    • end_pc
+    • handler_pc
+    ")]
+    InvalidIndexesInCodeAttribute,
 }

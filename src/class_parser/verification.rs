@@ -1,6 +1,6 @@
 use super::errors::CpNodeError;
 use super::ErrorAttributes;
-use super::{Attributes, ClassFile, CpNode, ParsingError};
+use super::{Attributes, ClassFile, CpNode, ParsingError, StackMapFrame};
 
 pub struct Verifier<'a> {
     class: ClassFile<'a>,
@@ -14,8 +14,8 @@ impl<'a> Verifier<'a> {
             .iter()
             .enumerate()
             .filter_map(|x| match x.1 {
-                | Attributes::BootstrapMethods(_) => Some(x.0),
-                | _ => None,
+                Attributes::BootstrapMethods(_) => Some(x.0),
+                _ => None,
             })
             .collect::<Vec<_>>();
 
@@ -44,11 +44,11 @@ impl<'a> Verifier<'a> {
         }
 
         let this_class = match match &class.cp[class.this_class.to_u2() as usize - 1] {
-            | CpNode::Class(z) => &class.cp[z.name_index.to_u2() as usize - 1],
-            | _ => unreachable!(),
+            CpNode::Class(z) => &class.cp[z.name_index.to_u2() as usize - 1],
+            _ => unreachable!(),
         } {
-            | CpNode::Utf8(z) => z.bytes,
-            | _ => unreachable!(),
+            CpNode::Utf8(z) => z.bytes,
+            _ => unreachable!(),
         };
 
         let access_flags = class.access_flags.to_u2();
@@ -122,62 +122,113 @@ impl<'a> Verifier<'a> {
         Ok(self.class)
     }
 
-    fn verify_attributes(&self) -> Result<(), ParsingError<'a>> {
-        let attributes = &self.class.attributes;
+    fn verify_attributes(&self, attribute: Attributes) -> Result<(), ParsingError<'a>> {
         let cp = &self.class.cp;
 
-        for attribute in attributes {
-            match attribute {
-                | Attributes::Value(cv) => match cp[cv.value_index.to_u2() as usize] {
-                    | CpNode::Integer(_)
-                    | CpNode::Float(_)
-                    | CpNode::Long(_)
-                    | CpNode::Double(_)
-                    | CpNode::String(_) => {}
-                    | _ => {
-                        return Err(ParsingError::InvalidIndexFromAttributeToNodes(
-                            ErrorAttributes::Value,
-                            &[
-                                CpNodeError::Integer,
-                                CpNodeError::Float,
-                                CpNodeError::Long,
-                                CpNodeError::Double,
-                                CpNodeError::String,
-                            ],
-                            "value_index",
-                        ))
+        match attribute {
+            Attributes::Value(cv) => match cp[cv.value_index.to_u2() as usize] {
+                CpNode::Integer(_)
+                | CpNode::Float(_)
+                | CpNode::Long(_)
+                | CpNode::Double(_)
+                | CpNode::String(_) => {}
+                _ => {
+                    return Err(ParsingError::InvalidIndexFromAttributeToNodes(
+                        ErrorAttributes::Value,
+                        &[
+                            CpNodeError::Integer,
+                            CpNodeError::Float,
+                            CpNodeError::Long,
+                            CpNodeError::Double,
+                            CpNodeError::String,
+                        ],
+                        "value_index",
+                    ))
+                }
+            },
+            Attributes::Code(code) => {
+                let code_arr = code.code;
+
+                if code_arr.len() >= 65536 || code_arr.is_empty() {
+                    return Err(ParsingError::CodeAttributeCodeLength);
+                }
+
+                for y in &code.exception_table {
+                    if code_arr.get(y.start_pc.to_u2() as usize).is_none()
+                        || code_arr.get(y.end_pc.to_u2() as usize).is_none()
+                        || code_arr.get(y.handler_pc.to_u2() as usize).is_none()
+                    {
+                        return Err(ParsingError::InvalidIndexesInCodeAttribute);
                     }
-                },
-                | Attributes::Code(_) => todo!(),
-                | Attributes::StackMapTable(_) => todo!(),
-                | Attributes::Exceptions(_) => todo!(),
-                | Attributes::InnerClass(_) => todo!(),
-                | Attributes::EnclosingMethod(_) => todo!(),
-                | Attributes::Synthetic(_) => todo!(),
-                | Attributes::Signature(_) => todo!(),
-                | Attributes::SourceFile(_) => todo!(),
-                | Attributes::SourceDebugExt(_) => todo!(),
-                | Attributes::LineNumberTable(_) => todo!(),
-                | Attributes::LocalVariableTable(_) => todo!(),
-                | Attributes::LocalVariableTypeTable(_) => todo!(),
-                | Attributes::Deprecated(_) => todo!(),
-                | Attributes::RuntimeVisibleAnnotations(_) => todo!(),
-                | Attributes::RuntimeInvisibleAnnotations(_) => todo!(),
-                | Attributes::RuntimeVisibleParameterAnnotations(_) => todo!(),
-                | Attributes::RuntimeInvisibleParameterAnnotations(_) => todo!(),
-                | Attributes::RuntimeVisibleTypeAnnotations(_) => todo!(),
-                | Attributes::RuntimeInvisibleTypeAnnotations(_) => todo!(),
-                | Attributes::AnnotationDefault(_) => todo!(),
-                | Attributes::BootstrapMethods(_) => todo!(),
-                | Attributes::MethodParameters(_) => todo!(),
-                | Attributes::Module(_) => todo!(),
-                | Attributes::ModulePackages(_) => todo!(),
-                | Attributes::ModuleMainClass(_) => todo!(),
-                | Attributes::NestHost(_) => todo!(),
-                | Attributes::NestMembers(_) => todo!(),
-                | Attributes::Record(_) => todo!(),
-                | Attributes::PermittedSubclasses(_) => todo!(),
+
+                    if y.catch_type.to_u2() != 0 {
+                        match cp[y.catch_type.to_u2() as usize] {
+                            CpNode::Class(..) => {}
+                            _ => {
+                                return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                                    ErrorAttributes::Code,
+                                    CpNodeError::Class,
+                                    "catch_type",
+                                ));
+                            }
+                        }
+                    }
+                }
+
+                for attr in code.attributes {
+                    self.verify_attributes(attr)?;
+                }
             }
+            Attributes::StackMapTable(smt) => {
+                for smf in smt.entries {
+                    match smf {
+                        StackMapFrame::SameLocals1StackItemFrame(z)
+                        | StackMapFrame::SameLocals1StackItemFrameExtended(z) => match z.stack {
+                            super::VerificationTypeInfo::ObjectVariableInfo(y) => {
+                                match cp[y.cp_index.to_u2() as usize] {
+                                    CpNode::Class(..) => {}
+                                    _ => {
+                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                                            ErrorAttributes::StackMapTable,
+                                            CpNodeError::Class,
+                                            "cp_index",
+                                        ))
+                                    }
+                                }
+                            }
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+                }
+            }
+            Attributes::Exceptions(_) => todo!(),
+            Attributes::InnerClass(_) => todo!(),
+            Attributes::EnclosingMethod(_) => todo!(),
+            Attributes::Synthetic(_) => todo!(),
+            Attributes::Signature(_) => todo!(),
+            Attributes::SourceFile(_) => todo!(),
+            Attributes::SourceDebugExt(_) => todo!(),
+            Attributes::LineNumberTable(_) => todo!(),
+            Attributes::LocalVariableTable(_) => todo!(),
+            Attributes::LocalVariableTypeTable(_) => todo!(),
+            Attributes::Deprecated(_) => todo!(),
+            Attributes::RuntimeVisibleAnnotations(_) => todo!(),
+            Attributes::RuntimeInvisibleAnnotations(_) => todo!(),
+            Attributes::RuntimeVisibleParameterAnnotations(_) => todo!(),
+            Attributes::RuntimeInvisibleParameterAnnotations(_) => todo!(),
+            Attributes::RuntimeVisibleTypeAnnotations(_) => todo!(),
+            Attributes::RuntimeInvisibleTypeAnnotations(_) => todo!(),
+            Attributes::AnnotationDefault(_) => todo!(),
+            Attributes::BootstrapMethods(_) => todo!(),
+            Attributes::MethodParameters(_) => todo!(),
+            Attributes::Module(_) => todo!(),
+            Attributes::ModulePackages(_) => todo!(),
+            Attributes::ModuleMainClass(_) => todo!(),
+            Attributes::NestHost(_) => todo!(),
+            Attributes::NestMembers(_) => todo!(),
+            Attributes::Record(_) => todo!(),
+            Attributes::PermittedSubclasses(_) => todo!(),
         }
 
         Ok(())
@@ -188,7 +239,7 @@ impl<'a> Verifier<'a> {
         let bootstrap_methods = &self.bootstrap_methods;
 
         match node {
-            | CpNode::Class(class) => {
+            CpNode::Class(class) => {
                 let node = &cp[class.name_index.to_u2() as usize - 1];
                 if let CpNode::Utf8(string) = node {
                     string.verify_binary_class_or_interface_name()?;
@@ -202,7 +253,7 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::FieldRef(fieldref) => {
+            CpNode::FieldRef(fieldref) => {
                 let class_index = fieldref.class_index;
                 let name_and_type = fieldref.name_and_type_index;
 
@@ -229,7 +280,7 @@ impl<'a> Verifier<'a> {
                 }
             }
 
-            | CpNode::MethodRef(methodref) => {
+            CpNode::MethodRef(methodref) => {
                 let class_index = methodref.class_index;
                 let name_and_type = methodref.name_and_type_index;
 
@@ -256,7 +307,7 @@ impl<'a> Verifier<'a> {
                 }
             }
 
-            | CpNode::InterfaceMethodRef(interfacemethodref) => {
+            CpNode::InterfaceMethodRef(interfacemethodref) => {
                 let class_index = interfacemethodref.class_index;
                 let name_and_type = interfacemethodref.name_and_type_index;
 
@@ -283,7 +334,7 @@ impl<'a> Verifier<'a> {
                 }
             }
 
-            | CpNode::String(string) => {
+            CpNode::String(string) => {
                 let node = &cp[string.string_index.to_u2() as usize - 1];
                 if let CpNode::Utf8(_) = node {
                     self.verify_cp_node(node)?
@@ -296,7 +347,7 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::MethodType(methodtype) => {
+            CpNode::MethodType(methodtype) => {
                 let node = &cp[methodtype.descriptor_index.to_u2() as usize - 1];
                 if let CpNode::Utf8(_) = node {
                     self.verify_cp_node(node)?
@@ -309,7 +360,7 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::Module(module) => {
+            CpNode::Module(module) => {
                 let node = &cp[module.name_index.to_u2() as usize - 1];
                 if let CpNode::Utf8(_) = node {
                     self.verify_cp_node(node)?
@@ -322,7 +373,7 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::Package(package) => {
+            CpNode::Package(package) => {
                 let package = &cp[package.name_index.to_u2() as usize - 1];
                 if let CpNode::Utf8(_) = package {
                     self.verify_cp_node(node)?
@@ -335,14 +386,14 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::Dynamic(dynamic) => {
+            CpNode::Dynamic(dynamic) => {
                 let bootstrap_method_attr_index = dynamic.bootstrap_method_attr_index.to_u2();
 
                 if bootstrap_methods.len() != 1 {
                     return Err(ParsingError::InvalidAmountOfBootStrapMethodsInClass);
                 } else if match &self.class.attributes[bootstrap_methods[0]] {
-                    | Attributes::BootstrapMethods(z) => z,
-                    | _ => unreachable!(),
+                    Attributes::BootstrapMethods(z) => z,
+                    _ => unreachable!(),
                 }
                 .bootstrap_methods
                 .get(bootstrap_method_attr_index as usize)
@@ -366,7 +417,7 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::NameAndType(nameandtype) => {
+            CpNode::NameAndType(nameandtype) => {
                 let name_index = nameandtype.name_index.to_u2();
 
                 let node = &cp[name_index as usize - 1];
@@ -381,14 +432,14 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::InvokeDynamic(dynamic) => {
+            CpNode::InvokeDynamic(dynamic) => {
                 let bootstrap_method_attr_index = dynamic.bootstrap_method_attr_index.to_u2();
 
                 if bootstrap_methods.len() != 1 {
                     return Err(ParsingError::InvalidAmountOfBootStrapMethodsInClass);
                 } else if match &self.class.attributes[bootstrap_methods[0]] {
-                    | Attributes::BootstrapMethods(z) => z,
-                    | _ => unreachable!(),
+                    Attributes::BootstrapMethods(z) => z,
+                    _ => unreachable!(),
                 }
                 .bootstrap_methods
                 .get(bootstrap_method_attr_index as usize)
@@ -412,7 +463,7 @@ impl<'a> Verifier<'a> {
                 };
             }
 
-            | CpNode::MethodHandle(methodhandle) => {
+            CpNode::MethodHandle(methodhandle) => {
                 let reference_kind = &methodhandle.reference_kind;
                 let reference_index = methodhandle.reference_index.to_u2();
 
@@ -435,7 +486,7 @@ impl<'a> Verifier<'a> {
                 }
             }
 
-            | _ => {}
+            _ => {}
         };
 
         Ok(())
