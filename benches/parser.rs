@@ -1,7 +1,8 @@
 use aftermath::class_parser::Parser;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-fn parser(c: &mut Criterion) {
+fn parser(c: &mut Criterion)
+{
     let x = std::fs::read("./class_basket/module-info.class").unwrap();
     c.bench_function("LARGE class", |b| {
         b.iter(|| {

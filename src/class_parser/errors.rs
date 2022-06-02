@@ -3,7 +3,8 @@
 use thiserror::Error;
 
 #[derive(Debug)]
-pub enum CpNodeError {
+pub enum CpNodeError
+{
     Class,
     String,
     MethodType,
@@ -25,7 +26,8 @@ pub enum CpNodeError {
 }
 
 #[derive(Debug)]
-pub enum Attributes {
+pub enum Attributes
+{
     Value,
     Code,
     StackMapTable,
@@ -59,7 +61,8 @@ pub enum Attributes {
 }
 
 #[derive(Error, Debug)]
-pub enum ParsingError<'a> {
+pub enum ParsingError<'a>
+{
     // Parsing errors.
     #[error(
         "Malformed class -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨
