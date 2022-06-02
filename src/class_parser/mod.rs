@@ -14,14 +14,18 @@ type U4 = u32;
 #[repr(transparent)]
 pub struct U2([u8; 2]);
 
-impl Debug for U2 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Debug for U2
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
         write!(f, "{}", u16::from_be_bytes(self.0))
     }
 }
 
-impl U2 {
-    pub fn to_u2(self) -> u16 {
+impl U2
+{
+    pub fn to_u2(self) -> u16
+    {
         u16::from_be_bytes(self.0)
     }
 }
@@ -29,7 +33,8 @@ impl U2 {
 // -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub enum CpNode<'class> {
+pub enum CpNode<'class>
+{
     Class(Class),
     String(StringCp),
     MethodType(MethodType),
@@ -51,7 +56,8 @@ pub enum CpNode<'class> {
 }
 
 #[derive(Debug)]
-pub enum Attributes<'class> {
+pub enum Attributes<'class>
+{
     Value(Value),
     Code(AttrCode<'class>),
     StackMapTable(StackMapTable),
@@ -85,7 +91,8 @@ pub enum Attributes<'class> {
 }
 
 #[derive(Debug)]
-pub enum TargetInfo {
+pub enum TargetInfo
+{
     TypeParameterTarget(TypeParameterTarget),
     Supertype(Supertype),
     TypeParameterBound(TypeParameterBound),
@@ -99,7 +106,8 @@ pub enum TargetInfo {
 }
 
 #[derive(Debug)]
-pub enum ElementValue {
+pub enum ElementValue
+{
     ConstValueIndex(U2),
     EnumConstValue(EnumConstValue),
     ClassInfoIndex(U2),
@@ -108,7 +116,8 @@ pub enum ElementValue {
 }
 
 #[derive(Debug)]
-pub enum StackMapFrame {
+pub enum StackMapFrame
+{
     SameFrame(SameFrame),
     SameLocals1StackItemFrame(SameLocals1StackItemFrame),
     SameLocals1StackItemFrameExtended(SameLocals1StackItemFrameExtended),
@@ -119,7 +128,8 @@ pub enum StackMapFrame {
 }
 
 #[derive(Debug)]
-pub enum VerificationTypeInfo {
+pub enum VerificationTypeInfo
+{
     TopVariableInfo(TopVariableInfo),
     IntegerVariableInfo(IntegerVariableInfo),
     FloatVariableInfo(FloatVariableInfo),
@@ -134,44 +144,51 @@ pub enum VerificationTypeInfo {
 // -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct SameFrame {
+pub struct SameFrame
+{
     frame_type: u8,
 }
 
 #[derive(Debug)]
-pub struct SameLocals1StackItemFrame {
+pub struct SameLocals1StackItemFrame
+{
     frame_type: u8,
     stack: VerificationTypeInfo,
 }
 
 #[derive(Debug)]
-pub struct SameLocals1StackItemFrameExtended {
+pub struct SameLocals1StackItemFrameExtended
+{
     frame_type: u8,
     offset_delta: U2,
     stack: VerificationTypeInfo,
 }
 
 #[derive(Debug)]
-pub struct ChopFrame {
+pub struct ChopFrame
+{
     frame_type: u8,
     offset_delta: U2,
 }
 
 #[derive(Debug)]
-pub struct SameFrameExtended {
+pub struct SameFrameExtended
+{
     frame_type: u8,
     offset_delta: U2,
 }
 
 #[derive(Debug)]
-pub struct AppendFrame {
+pub struct AppendFrame
+{
     frame_type: u8,
     offset_delta: U2,
     locals: Vec<VerificationTypeInfo>,
 }
 
 #[derive(Debug)]
-pub struct FullFrame {
+pub struct FullFrame
+{
     frame_type: u8,
     offset_delta: U2,
     locals: Vec<VerificationTypeInfo>,
@@ -179,118 +196,139 @@ pub struct FullFrame {
 }
 
 #[derive(Debug)]
-pub struct TopVariableInfo {
+pub struct TopVariableInfo
+{
     tag: u8,
 }
 
 #[derive(Debug)]
-pub struct IntegerVariableInfo {
+pub struct IntegerVariableInfo
+{
     tag: u8,
 }
 
 #[derive(Debug)]
-pub struct FloatVariableInfo {
+pub struct FloatVariableInfo
+{
     tag: u8,
 }
 
 #[derive(Debug)]
-pub struct DoubleVariableInfo {
+pub struct DoubleVariableInfo
+{
     tag: u8,
 }
 
 #[derive(Debug)]
-pub struct LongVariableInfo {
+pub struct LongVariableInfo
+{
     tag: u8,
 }
 
 #[derive(Debug)]
-pub struct NullVariableInfo {
+pub struct NullVariableInfo
+{
     tag: u8,
 }
 
 #[derive(Debug)]
-pub struct UninitializedThisVariableInfo {
+pub struct UninitializedThisVariableInfo
+{
     tag: u8,
 }
 
 #[derive(Debug)]
-pub struct ObjectVariableInfo {
+pub struct ObjectVariableInfo
+{
     tag: u8,
     cp_index: U2,
 }
 
 #[derive(Debug)]
-pub struct UninitializedVariableInfo {
+pub struct UninitializedVariableInfo
+{
     tag: u8,
     offset: U2,
 }
 
 #[derive(Debug)]
-pub struct PermittedSubclasses<'class> {
+pub struct PermittedSubclasses<'class>
+{
     classes: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct RecordComponentInfo<'class> {
+pub struct RecordComponentInfo<'class>
+{
     name_index: U2,
     descriptor_index: U2,
     attributes: Vec<Attributes<'class>>,
 }
 
 #[derive(Debug)]
-pub struct Record<'class> {
+pub struct Record<'class>
+{
     components: Vec<RecordComponentInfo<'class>>,
 }
 
 #[derive(Debug)]
-pub struct ModulePackages<'class> {
+pub struct ModulePackages<'class>
+{
     package_index: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct ModuleMainClass {
+pub struct ModuleMainClass
+{
     main_class_index: U2,
 }
 
 #[derive(Debug)]
-pub struct NestHost {
+pub struct NestHost
+{
     host_class_index: U2,
 }
 
 #[derive(Debug)]
-pub struct NestMembers<'class> {
+pub struct NestMembers<'class>
+{
     classes: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct ModuleRequires {
+pub struct ModuleRequires
+{
     requires_index: U2,
     requires_flags: U2,
     require_version_index: U2,
 }
 
 #[derive(Debug)]
-pub struct ModuleExports<'class> {
+pub struct ModuleExports<'class>
+{
     exports_index: U2,
     exports_flags: U2,
     exports_to_index: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct ModuleOpens<'class> {
+pub struct ModuleOpens<'class>
+{
     opens_index: U2,
     opens_flags: U2,
     opens_to_index: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct ModuleProvides<'class> {
+pub struct ModuleProvides<'class>
+{
     provides_index: U2,
     provides_with_index: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct Module<'class> {
+pub struct Module<'class>
+{
     module_name_index: U2,
     module_flags: U2,
     module_version_index: U2,
@@ -302,45 +340,53 @@ pub struct Module<'class> {
 }
 
 #[derive(Debug)]
-pub struct MethodParametersInner {
+pub struct MethodParametersInner
+{
     name_index: U2,
     access_flags: U2,
 }
 
 #[derive(Debug)]
-pub struct MethodParameters {
+pub struct MethodParameters
+{
     parameters: Vec<MethodParametersInner>,
 }
 
 #[derive(Debug)]
-pub struct AnnotationDefault {
+pub struct AnnotationDefault
+{
     default_value: ElementValue,
 }
 
 #[derive(Debug)]
-pub struct RuntimeInvisibleTypeAnnotations {
+pub struct RuntimeInvisibleTypeAnnotations
+{
     annotations: Vec<TypeAnnotation>,
 }
 
 #[derive(Debug)]
-pub struct TypePathInner {
+pub struct TypePathInner
+{
     type_path_kind: U1,
     type_argument_index: U1,
 }
 
 #[derive(Debug)]
-pub struct TypePath {
+pub struct TypePath
+{
     path: Vec<TypePathInner>,
 }
 
 #[derive(Debug)]
-pub struct TypeAnnotationInner {
+pub struct TypeAnnotationInner
+{
     element_name_index: U2,
     value: ElementValue,
 }
 
 #[derive(Debug)]
-pub struct TypeAnnotation {
+pub struct TypeAnnotation
+{
     target_info: TargetInfo,
     target_path: TypePath,
     type_index: U2,
@@ -349,66 +395,78 @@ pub struct TypeAnnotation {
 }
 
 #[derive(Debug)]
-pub struct RuntimeVisibleTypeAnnotations {
+pub struct RuntimeVisibleTypeAnnotations
+{
     type_annotation: Vec<TypeAnnotation>,
 }
 
 #[derive(Debug)]
-pub struct RuntimeInvisibleAnnotations {
+pub struct RuntimeInvisibleAnnotations
+{
     annotations: Vec<Annotation>,
 }
 
 #[derive(Debug)]
-pub struct ParameterAnnotationsRuntimeParameterAnnotationsAttr {
+pub struct ParameterAnnotationsRuntimeParameterAnnotationsAttr
+{
     annotations: Vec<Annotation>,
 }
 
 #[derive(Debug)]
-pub struct RuntimeInvisibleParameterAnnotations {
+pub struct RuntimeInvisibleParameterAnnotations
+{
     parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
 }
 
 #[derive(Debug)]
-pub struct RuntimeVisibleParameterAnnotations {
+pub struct RuntimeVisibleParameterAnnotations
+{
     parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
 }
 
 #[derive(Debug)]
-pub struct EnumConstValue {
+pub struct EnumConstValue
+{
     type_name_index: U2,
     const_name_index: U2,
 }
 
 #[derive(Debug)]
-pub struct ArrayValue {
+pub struct ArrayValue
+{
     element_value: Vec<ElementValue>,
 }
 
 #[derive(Debug)]
-pub struct AnnotationInner {
+pub struct AnnotationInner
+{
     element_name_index: U2,
     value: ElementValue,
 }
 
 #[derive(Debug)]
-pub struct Annotation {
+pub struct Annotation
+{
     type_index: U2,
     element_value_pairs: Vec<AnnotationInner>,
 }
 
 #[derive(Debug)]
-pub struct RuntimeVisibleAnnotations {
+pub struct RuntimeVisibleAnnotations
+{
     annotations: Vec<Annotation>,
 }
 
 #[derive(Debug)]
-pub struct LineNumberTableAttrInner {
+pub struct LineNumberTableAttrInner
+{
     start_pc: U2,
     line_number: U2,
 }
 
 #[derive(Debug)]
-pub struct LocalVariableTypeTableAttrInner {
+pub struct LocalVariableTypeTableAttrInner
+{
     start_pc: U2,
     length: U2,
     name_index: U2,
@@ -417,7 +475,8 @@ pub struct LocalVariableTypeTableAttrInner {
 }
 
 #[derive(Debug)]
-pub struct LocalVariableTypeTable {
+pub struct LocalVariableTypeTable
+{
     local_variable_type_table: Vec<LocalVariableTypeTableAttrInner>,
 }
 
@@ -425,7 +484,8 @@ pub struct LocalVariableTypeTable {
 pub struct Deprecated;
 
 #[derive(Debug)]
-pub struct LocalVariableTableAttrInner {
+pub struct LocalVariableTableAttrInner
+{
     start_pc: U2,
     length: U2,
     name_index: U2,
@@ -434,22 +494,26 @@ pub struct LocalVariableTableAttrInner {
 }
 
 #[derive(Debug)]
-pub struct LocalVariableTable {
+pub struct LocalVariableTable
+{
     local_variable_table: Vec<LocalVariableTableAttrInner>,
 }
 
 #[derive(Debug)]
-pub struct LineNumberTable {
+pub struct LineNumberTable
+{
     line_number_table: Vec<LineNumberTableAttrInner>,
 }
 
 #[derive(Debug)]
-pub struct SourceDebugExt<'class> {
+pub struct SourceDebugExt<'class>
+{
     debug_extension: &'class [U1],
 }
 
 #[derive(Debug)]
-pub struct ExceptionTableAttrCode {
+pub struct ExceptionTableAttrCode
+{
     start_pc: U2,
     end_pc: U2,
     handler_pc: U2,
@@ -457,7 +521,8 @@ pub struct ExceptionTableAttrCode {
 }
 
 #[derive(Debug)]
-pub struct AttrCode<'class> {
+pub struct AttrCode<'class>
+{
     max_stack: U2,
     max_locals: U2,
     code: &'class [U1],
@@ -469,23 +534,27 @@ pub struct AttrCode<'class> {
 pub struct Synthetic;
 
 #[derive(Debug)]
-pub struct Signature {
+pub struct Signature
+{
     signature_index: U2,
 }
 
 #[derive(Debug)]
-pub struct SourceFile {
+pub struct SourceFile
+{
     sourcefile_index: U2,
 }
 
 #[derive(Debug)]
-pub struct EnclosingMethod {
+pub struct EnclosingMethod
+{
     class_index: U2,
     method_index: U2,
 }
 
 #[derive(Debug)]
-pub struct ClassesInnerClassAttr {
+pub struct ClassesInnerClassAttr
+{
     inner_class_info_index: U2,
     outer_class_info_index: U2,
     inner_name_index: U2,
@@ -493,38 +562,45 @@ pub struct ClassesInnerClassAttr {
 }
 
 #[derive(Debug)]
-pub struct InnerClass {
+pub struct InnerClass
+{
     classes: Vec<ClassesInnerClassAttr>,
 }
 
 #[derive(Debug)]
-pub struct StackMapTable {
+pub struct StackMapTable
+{
     entries: Vec<StackMapFrame>,
 }
 
 #[derive(Debug)]
-pub struct BootStrapMethodsInner<'class> {
+pub struct BootStrapMethodsInner<'class>
+{
     bootstrap_method_ref: U2,
     bootstrap_arguments: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct BootStrapMethods<'class> {
+pub struct BootStrapMethods<'class>
+{
     bootstrap_methods: Vec<BootStrapMethodsInner<'class>>,
 }
 
 #[derive(Debug)]
-pub struct Value {
+pub struct Value
+{
     value_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Exceptions<'class> {
+pub struct Exceptions<'class>
+{
     exception_index_table: &'class [U2],
 }
 
 #[derive(Debug)]
-pub struct FieldInfo<'class> {
+pub struct FieldInfo<'class>
+{
     pub access_flags: U2,
     pub name_index: U2,
     pub descriptor_index: U2,
@@ -532,7 +608,8 @@ pub struct FieldInfo<'class> {
 }
 
 #[derive(Debug)]
-pub struct MethodInfo<'class> {
+pub struct MethodInfo<'class>
+{
     pub access_flags: U2,
     pub name_index: U2,
     pub descriptor_index: U2,
@@ -540,7 +617,8 @@ pub struct MethodInfo<'class> {
 }
 
 #[derive(Debug)]
-pub struct ClassFile<'class> {
+pub struct ClassFile<'class>
+{
     pub minor_v: U2,
     pub major_v: U2,
     pub cp: Vec<CpNode<'class>>,
@@ -554,162 +632,192 @@ pub struct ClassFile<'class> {
 }
 
 #[derive(Debug)]
-pub struct TypeParameterTarget {
+pub struct TypeParameterTarget
+{
     type_parameter_index: U1,
 }
 
 #[derive(Debug)]
-pub struct Supertype {
+pub struct Supertype
+{
     supertype_index: U2,
 }
 
 #[derive(Debug)]
-pub struct TypeParameterBound {
+pub struct TypeParameterBound
+{
     type_parameter_index: U1,
     bound_index: U1,
 }
 
 #[derive(Debug)]
-pub struct FormalParameter {
+pub struct FormalParameter
+{
     formal_parameter_index: U1,
 }
 
 #[derive(Debug)]
-pub struct Throws {
+pub struct Throws
+{
     throws_type_index: U1,
 }
 
 #[derive(Debug)]
-pub struct Localvar {
+pub struct Localvar
+{
     table: Vec<LocalvarInner>,
 }
 
 #[derive(Debug)]
-pub struct LocalvarInner {
+pub struct LocalvarInner
+{
     start_pc: U2,
     length: U2,
     index: U2,
 }
 
 #[derive(Debug)]
-pub struct Catch {
+pub struct Catch
+{
     exception_table_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Offset {
+pub struct Offset
+{
     offset: U2,
 }
 
 #[derive(Debug)]
-pub struct TypeArgument {
+pub struct TypeArgument
+{
     offset: U2,
     type_argument_index: U1,
 }
 
 #[derive(Debug)]
-pub struct Class {
+pub struct Class
+{
     name_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Fieldref {
+pub struct Fieldref
+{
     class_index: U2,
     name_and_type_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Methodref {
+pub struct Methodref
+{
     class_index: U2,
     name_and_type_index: U2,
 }
 
 #[derive(Debug)]
-pub struct InterfaceMethodref {
+pub struct InterfaceMethodref
+{
     class_index: U2,
     name_and_type_index: U2,
 }
 
 #[derive(Debug)]
-pub struct StringCp {
+pub struct StringCp
+{
     string_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Integer {
+pub struct Integer
+{
     bytes: U4,
 }
 
 #[derive(Debug)]
-pub struct Float {
+pub struct Float
+{
     bytes: U4,
 }
 
 #[derive(Debug)]
-pub struct Long {
+pub struct Long
+{
     high_bytes: U4,
     low_bytes: U4,
 }
 
 #[derive(Debug)]
-pub struct Double {
+pub struct Double
+{
     high_bytes: U4,
     low_bytes: U4,
 }
 
 #[derive(Debug)]
-pub struct NameAndType {
+pub struct NameAndType
+{
     name_index: U2,
     descriptor_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Utf8<'class> {
+pub struct Utf8<'class>
+{
     bytes: &'class str,
 }
 
 #[derive(Debug)]
-pub struct MethodHandle {
+pub struct MethodHandle
+{
     reference_kind: u8,
     reference_index: U2,
 }
 
 #[derive(Debug)]
-pub struct MethodType {
+pub struct MethodType
+{
     descriptor_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Dynamic {
+pub struct Dynamic
+{
     bootstrap_method_attr_index: U2,
     name_and_type_index: U2,
 }
 
 #[derive(Debug)]
-pub struct InvokeDynamic {
+pub struct InvokeDynamic
+{
     bootstrap_method_attr_index: U2,
     name_and_type_index: U2,
 }
 
 #[derive(Debug)]
-pub struct ModuleCp {
+pub struct ModuleCp
+{
     name_index: U2,
 }
 
 #[derive(Debug)]
-pub struct Package {
+pub struct Package
+{
     name_index: U2,
 }
 // -------------------------------------------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct Parser<'class> {
+pub struct Parser<'class>
+{
     pub bytes: &'class [U1],
     index: usize,
 }
 
-impl<'class> Utf8<'class> {
-    fn verify_binary_class_or_interface_name(&self) -> Result<(), ParsingError<'class>> {
+impl<'class> Utf8<'class>
+{
+    fn verify_binary_class_or_interface_name(&self) -> Result<(), ParsingError<'class>>
+    {
         for char in self.bytes.chars() {
             if char == '.' {
                 return Err(ParsingError::BinaryNameContainsDot);
@@ -720,19 +828,23 @@ impl<'class> Utf8<'class> {
     }
 }
 
-impl<'class> Parser<'class> {
-    pub fn new(bytes: &'class [u8]) -> Self {
+impl<'class> Parser<'class>
+{
+    pub fn new(bytes: &'class [u8]) -> Self
+    {
         Self { bytes, index: 0 }
     }
 
-    fn u1(&mut self) -> U1 {
+    fn u1(&mut self) -> U1
+    {
         let output = self.bytes[0];
         self.bytes = &self.bytes[1..];
         self.index += 1;
         output
     }
 
-    fn u1_range(&mut self, length: U4) -> &'class [U1] {
+    fn u1_range(&mut self, length: U4) -> &'class [U1]
+    {
         let output = &self.bytes[0..length as usize];
         self.bytes = &self.bytes[length as usize..];
         self.index += length as usize;
@@ -740,11 +852,13 @@ impl<'class> Parser<'class> {
         output
     }
 
-    fn u2(&mut self) -> U2 {
+    fn u2(&mut self) -> U2
+    {
         U2([self.u1(), self.u1()])
     }
 
-    fn u2_range(&mut self, length: U4) -> &'class [U2] {
+    fn u2_range(&mut self, length: U4) -> &'class [U2]
+    {
         unsafe {
             core::slice::from_raw_parts(
                 self.u1_range(length * 2).as_ptr().cast(),
@@ -753,15 +867,18 @@ impl<'class> Parser<'class> {
         }
     }
 
-    fn to_u2(&self, data: U2) -> u16 {
+    fn to_u2(&self, data: U2) -> u16
+    {
         u16::from_be_bytes(data.0)
     }
 
-    fn u4(&mut self) -> U4 {
+    fn u4(&mut self) -> U4
+    {
         U4::from_be_bytes(self.u1_range(4).try_into().unwrap())
     }
 
-    fn element_value(&mut self) -> Result<ElementValue, ParsingError<'class>> {
+    fn element_value(&mut self) -> Result<ElementValue, ParsingError<'class>>
+    {
         let tag = self.u1();
 
         match tag as char {
@@ -800,7 +917,8 @@ impl<'class> Parser<'class> {
         }
     }
 
-    fn annotation(&mut self) -> Result<Annotation, ParsingError<'class>> {
+    fn annotation(&mut self) -> Result<Annotation, ParsingError<'class>>
+    {
         let type_index = self.u2();
         let num_element_value_pairs = self.u2();
         let mut element_value_pairs = Vec::with_capacity(num_element_value_pairs.to_u2().into());
@@ -821,7 +939,8 @@ impl<'class> Parser<'class> {
         })
     }
 
-    fn annotation_range(&mut self, length: u16) -> Result<Vec<Annotation>, ParsingError<'class>> {
+    fn annotation_range(&mut self, length: u16) -> Result<Vec<Annotation>, ParsingError<'class>>
+    {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
@@ -831,7 +950,8 @@ impl<'class> Parser<'class> {
         Ok(annotations)
     }
 
-    fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>, ParsingError<'class>> {
+    fn cp(&mut self, length: u16) -> Result<Vec<CpNode<'class>>, ParsingError<'class>>
+    {
         let mut cp: Vec<CpNode<'class>> = Vec::with_capacity(length as usize - 1);
 
         while cp.len() + 1 < length as usize {
@@ -990,7 +1110,8 @@ impl<'class> Parser<'class> {
         Ok(cp)
     }
 
-    pub fn type_annotation(&mut self) -> Result<TypeAnnotation, ParsingError<'class>> {
+    pub fn type_annotation(&mut self) -> Result<TypeAnnotation, ParsingError<'class>>
+    {
         let target_type = self.u1();
         let target_info = match target_type {
             0x00 | 0x01 => {
@@ -1108,7 +1229,8 @@ impl<'class> Parser<'class> {
     fn type_annotation_range(
         &mut self,
         length: u16,
-    ) -> Result<Vec<TypeAnnotation>, ParsingError<'class>> {
+    ) -> Result<Vec<TypeAnnotation>, ParsingError<'class>>
+    {
         let mut annotations = Vec::with_capacity(length.into());
 
         for _ in 0..length {
@@ -1118,7 +1240,8 @@ impl<'class> Parser<'class> {
         Ok(annotations)
     }
 
-    fn stackmapframe(&mut self) -> Result<StackMapFrame, ParsingError<'class>> {
+    fn stackmapframe(&mut self) -> Result<StackMapFrame, ParsingError<'class>>
+    {
         let frame_type = self.u1();
 
         match frame_type {
@@ -1192,7 +1315,8 @@ impl<'class> Parser<'class> {
         }
     }
 
-    fn verification_type_info(&mut self) -> Result<VerificationTypeInfo, ParsingError<'class>> {
+    fn verification_type_info(&mut self) -> Result<VerificationTypeInfo, ParsingError<'class>>
+    {
         let tag = self.u1();
 
         Ok(match tag {
@@ -1223,7 +1347,8 @@ impl<'class> Parser<'class> {
         &mut self,
         length: u16,
         cp: &Vec<CpNode>,
-    ) -> Result<Vec<Attributes<'class>>, ParsingError<'class>> {
+    ) -> Result<Vec<Attributes<'class>>, ParsingError<'class>>
+    {
         let mut attributes = Vec::with_capacity(length as usize);
 
         while attributes.len() < length as usize {
@@ -1693,7 +1818,8 @@ impl<'class> Parser<'class> {
         &mut self,
         length: u16,
         cp: &Vec<CpNode<'class>>,
-    ) -> Result<Vec<MethodInfo<'class>>, ParsingError<'class>> {
+    ) -> Result<Vec<MethodInfo<'class>>, ParsingError<'class>>
+    {
         let mut methods = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -1717,7 +1843,8 @@ impl<'class> Parser<'class> {
         &mut self,
         length: u16,
         cp: &Vec<CpNode<'class>>,
-    ) -> Result<Vec<FieldInfo<'class>>, ParsingError<'class>> {
+    ) -> Result<Vec<FieldInfo<'class>>, ParsingError<'class>>
+    {
         let mut fields = Vec::with_capacity(length as usize);
 
         for _ in 0..length {
@@ -1738,7 +1865,8 @@ impl<'class> Parser<'class> {
         Ok(fields)
     }
 
-    pub fn parse(&mut self) -> Result<ClassFile<'class>, ParsingError<'class>> {
+    pub fn parse(&mut self) -> Result<ClassFile<'class>, ParsingError<'class>>
+    {
         let magic = self.u4();
 
         if magic != 0xCAFEBABE {

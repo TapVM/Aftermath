@@ -1,23 +1,29 @@
 use super::errors::CpNodeError;
 use super::ErrorAttributes;
-use super::{Attributes, ClassFile, CpNode, ParsingError, StackMapFrame};
+use super::{Attributes, ClassFile, CpNode, ParsingError, StackMapFrame, VerificationTypeInfo};
 
-pub struct Verifier<'a> {
+pub struct Verifier<'a>
+{
     class: ClassFile<'a>,
     bootstrap_methods: Vec<usize>,
 }
 
-impl<'a> Verifier<'a> {
-    pub fn new(class: ClassFile<'a>) -> Self {
-        let bootstrap_methods = class
+impl<'a> Verifier<'a>
+{
+    pub fn new(class: ClassFile<'a>) -> Self
+    {
+        let bootstrap_methods: Vec<_> = class
             .attributes
             .iter()
             .enumerate()
-            .filter_map(|x| match x.1 {
-                Attributes::BootstrapMethods(_) => Some(x.0),
-                _ => None,
+            .filter_map(|x| {
+                if let Attributes::BootstrapMethods(_) = x.1 {
+                    Some(x.0)
+                } else {
+                    None
+                }
             })
-            .collect::<Vec<_>>();
+            .collect();
 
         Self {
             class,
@@ -25,7 +31,8 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn verify(self) -> Result<ClassFile<'a>, ParsingError<'a>> {
+    pub fn verify(self) -> Result<ClassFile<'a>, ParsingError<'a>>
+    {
         let class = &self.class;
 
         let major_v = class.major_v.to_u2();
@@ -43,12 +50,15 @@ impl<'a> Verifier<'a> {
             self.verify_cp_node(node)?;
         }
 
-        let this_class = match match &class.cp[class.this_class.to_u2() as usize - 1] {
-            CpNode::Class(z) => &class.cp[z.name_index.to_u2() as usize - 1],
-            _ => unreachable!(),
-        } {
-            CpNode::Utf8(z) => z.bytes,
-            _ => unreachable!(),
+        let this_class = if let CpNode::Utf8(z) =
+            if let CpNode::Class(z) = &class.cp[class.this_class.to_u2() as usize - 1] {
+                &class.cp[z.name_index.to_u2() as usize - 1]
+            } else {
+                unreachable!()
+            } {
+            z.bytes
+        } else {
+            unreachable!()
         };
 
         let access_flags = class.access_flags.to_u2();
@@ -122,7 +132,8 @@ impl<'a> Verifier<'a> {
         Ok(self.class)
     }
 
-    fn verify_attributes(&self, attribute: Attributes) -> Result<(), ParsingError<'a>> {
+    fn verify_attributes(&self, attribute: Attributes) -> Result<(), ParsingError<'a>>
+    {
         let cp = &self.class.cp;
 
         match attribute {
@@ -161,17 +172,14 @@ impl<'a> Verifier<'a> {
                         return Err(ParsingError::InvalidIndexesInCodeAttribute);
                     }
 
-                    if y.catch_type.to_u2() != 0 {
-                        match cp[y.catch_type.to_u2() as usize] {
-                            CpNode::Class(..) => {}
-                            _ => {
-                                return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                                    ErrorAttributes::Code,
-                                    CpNodeError::Class,
-                                    "catch_type",
-                                ));
-                            }
-                        }
+                    if y.catch_type.to_u2() != 0
+                        && !matches!(cp[y.catch_type.to_u2() as usize], CpNode::Class(..))
+                    {
+                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                            ErrorAttributes::Code,
+                            CpNodeError::Class,
+                            "catch_type",
+                        ));
                     }
                 }
 
@@ -182,23 +190,18 @@ impl<'a> Verifier<'a> {
             Attributes::StackMapTable(smt) => {
                 for smf in smt.entries {
                     match smf {
-                        StackMapFrame::SameLocals1StackItemFrame(z)
-                        | StackMapFrame::SameLocals1StackItemFrameExtended(z) => match z.stack {
-                            super::VerificationTypeInfo::ObjectVariableInfo(y) => {
-                                match cp[y.cp_index.to_u2() as usize] {
-                                    CpNode::Class(..) => {}
-                                    _ => {
-                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                                            ErrorAttributes::StackMapTable,
-                                            CpNodeError::Class,
-                                            "cp_index",
-                                        ))
-                                    }
+                        StackMapFrame::SameLocals1StackItemFrame(z) => {
+                            if let VerificationTypeInfo::ObjectVariableInfo(y) = z.stack {
+                                if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..)) {
+                                    return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                                        ErrorAttributes::StackMapTable,
+                                        CpNodeError::Class,
+                                        "cp_index",
+                                    ));
                                 }
                             }
-                            _ => {}
-                        },
-                        _ => {}
+                        }
+                        _ => todo!(),
                     }
                 }
             }
@@ -234,7 +237,8 @@ impl<'a> Verifier<'a> {
         Ok(())
     }
 
-    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>> {
+    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>>
+    {
         let cp = &self.class.cp;
         let bootstrap_methods = &self.bootstrap_methods;
 
@@ -391,9 +395,12 @@ impl<'a> Verifier<'a> {
 
                 if bootstrap_methods.len() != 1 {
                     return Err(ParsingError::InvalidAmountOfBootStrapMethodsInClass);
-                } else if match &self.class.attributes[bootstrap_methods[0]] {
-                    Attributes::BootstrapMethods(z) => z,
-                    _ => unreachable!(),
+                } else if if let Attributes::BootstrapMethods(z) =
+                    &self.class.attributes[bootstrap_methods[0]]
+                {
+                    z
+                } else {
+                    unreachable!()
                 }
                 .bootstrap_methods
                 .get(bootstrap_method_attr_index as usize)
@@ -437,9 +444,12 @@ impl<'a> Verifier<'a> {
 
                 if bootstrap_methods.len() != 1 {
                     return Err(ParsingError::InvalidAmountOfBootStrapMethodsInClass);
-                } else if match &self.class.attributes[bootstrap_methods[0]] {
-                    Attributes::BootstrapMethods(z) => z,
-                    _ => unreachable!(),
+                } else if if let Attributes::BootstrapMethods(z) =
+                    &self.class.attributes[bootstrap_methods[0]]
+                {
+                    z
+                } else {
+                    unreachable!()
                 }
                 .bootstrap_methods
                 .get(bootstrap_method_attr_index as usize)

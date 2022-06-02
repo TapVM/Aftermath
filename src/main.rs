@@ -3,7 +3,8 @@ mod class_parser;
 use class_parser::verification::Verifier;
 use class_parser::Parser;
 
-pub fn black_box<T>(dummy: T) -> T {
+pub fn black_box<T>(dummy: T) -> T
+{
     unsafe {
         let ret = std::ptr::read_volatile(&dummy);
         std::mem::forget(dummy);
@@ -11,7 +12,8 @@ pub fn black_box<T>(dummy: T) -> T {
     }
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<()>
+{
     color_eyre::install()?;
 
     let file = include_bytes!(concat!(
