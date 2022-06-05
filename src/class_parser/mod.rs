@@ -1895,6 +1895,8 @@ impl<'class> Parser<'class>
         let attributes_count = self.u2();
         let attributes = self.attributes(attributes_count.to_u2(), &cp)?;
 
+        assert!(self.bytes.is_empty());
+
         Ok(ClassFile {
             minor_v,
             major_v,

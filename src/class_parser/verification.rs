@@ -137,13 +137,15 @@ impl<'a> Verifier<'a>
         let cp = &self.class.cp;
 
         match attribute {
-            Attributes::Value(cv) => match cp[cv.value_index.to_u2() as usize] {
-                CpNode::Integer(_)
-                | CpNode::Float(_)
-                | CpNode::Long(_)
-                | CpNode::Double(_)
-                | CpNode::String(_) => {}
-                _ => {
+            Attributes::Value(cv) => {
+                if !matches!(
+                    cp[cv.value_index.to_u2() as usize],
+                    CpNode::Integer(_)
+                        | CpNode::Float(_)
+                        | CpNode::Long(_)
+                        | CpNode::Double(_)
+                        | CpNode::String(_)
+                ) {
                     return Err(ParsingError::InvalidIndexFromAttributeToNodes(
                         ErrorAttributes::Value,
                         &[
@@ -154,9 +156,9 @@ impl<'a> Verifier<'a>
                             CpNodeError::String,
                         ],
                         "value_index",
-                    ))
+                    ));
                 }
-            },
+            }
             Attributes::Code(code) => {
                 let code_arr = code.code;
 
@@ -201,13 +203,88 @@ impl<'a> Verifier<'a>
                                 }
                             }
                         }
-                        _ => todo!(),
+                        StackMapFrame::SameLocals1StackItemFrameExtended(z) => {
+                            if let VerificationTypeInfo::ObjectVariableInfo(y) = z.stack {
+                                if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..)) {
+                                    return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                                        ErrorAttributes::StackMapTable,
+                                        CpNodeError::Class,
+                                        "cp_index",
+                                    ));
+                                }
+                            }
+                        }
+                        StackMapFrame::AppendFrame(z) => {
+                            for i in z.locals {
+                                if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
+                                    if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
+                                    {
+                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                                            ErrorAttributes::StackMapTable,
+                                            CpNodeError::Class,
+                                            "cp_index",
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                        StackMapFrame::FullFrame(z) => {
+                            for i in z.locals {
+                                if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
+                                    if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
+                                    {
+                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                                            ErrorAttributes::StackMapTable,
+                                            CpNodeError::Class,
+                                            "cp_index",
+                                        ));
+                                    }
+                                }
+                            }
+                            for i in z.stack {
+                                if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
+                                    if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
+                                    {
+                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                                            ErrorAttributes::StackMapTable,
+                                            CpNodeError::Class,
+                                            "cp_index",
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 }
             }
-            Attributes::Exceptions(_) => todo!(),
-            Attributes::InnerClass(_) => todo!(),
-            Attributes::EnclosingMethod(_) => todo!(),
+            Attributes::Exceptions(exception) => {
+                for i in exception.exception_index_table {
+                    if !matches!(cp[i.to_u2() as usize], CpNode::Class(..)) {
+                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                            ErrorAttributes::Exceptions,
+                            CpNodeError::Class,
+                            "exception_index_table",
+                        ));
+                    }
+                }
+            }
+            Attributes::InnerClass(innerclass) => {
+                for k in innerclass.classes {
+                    if let CpNode::Class(y) = &cp[k.inner_class_info_index.to_u2() as usize] {
+                        #[allow(non_snake_case)]
+                        let C = y;
+                        todo!()
+                    } else {
+                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                            ErrorAttributes::InnerClass,
+                            CpNodeError::Class,
+                            "inner_class_info_index",
+                        ));
+                    }
+                }
+            }
+            Attributes::EnclosingMethod(enclosingmethod) => {}
             Attributes::Synthetic(_) => todo!(),
             Attributes::Signature(_) => todo!(),
             Attributes::SourceFile(_) => todo!(),
