@@ -16,10 +16,7 @@ fn main() -> Result<()>
 {
     color_eyre::install()?;
 
-    let file = include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/class_basket/UsingToStringOrdering.class"
-    ));
+    let file = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/TopLevelClass.class"));
 
     let mut parser = Parser::new(file);
     let parsed = parser.parse()?;
