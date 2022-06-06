@@ -178,8 +178,8 @@ impl<'a> Verifier<'a>
             }
         }
 
-        for i in &self.class.fields {
-            for z in &i.attributes {
+        for z in &self.class.fields {
+            for z in &z.attributes {
                 if !matches!(
                     z,
                     Attributes::Value(..)
@@ -196,8 +196,8 @@ impl<'a> Verifier<'a>
             }
         }
 
-        for i in &self.class.methods {
-            for z in &i.attributes {
+        for z in &self.class.methods {
+            for z in &z.attributes {
                 if !matches!(
                     z,
                     Attributes::Code(..)
