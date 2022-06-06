@@ -132,186 +132,292 @@ impl<'a> Verifier<'a>
         Ok(self.class)
     }
 
-    fn verify_attributes(&self, attribute: Attributes) -> Result<(), ParsingError<'a>>
+    fn verify_attributes(&self) -> Result<(), ParsingError<'a>>
     {
-        let cp = &self.class.cp;
+        for z in &self.class.attributes {
+            if !matches!(
+                z,
+                Attributes::SourceFile(..)
+                    | Attributes::InnerClass(..)
+                    | Attributes::EnclosingMethod(..)
+                    | Attributes::SourceDebugExt(..)
+                    | Attributes::BootstrapMethods(..)
+                    | Attributes::Module(..)
+                    | Attributes::ModulePackages(..)
+                    | Attributes::ModuleMainClass(..)
+                    | Attributes::NestHost(..)
+                    | Attributes::NestMembers(..)
+                    | Attributes::Record(..)
+                    | Attributes::PermittedSubclasses(..)
+                    | Attributes::Synthetic(..)
+                    | Attributes::Deprecated(..)
+                    | Attributes::Signature(..)
+                    | Attributes::RuntimeVisibleAnnotations(..)
+                    | Attributes::RuntimeInvisibleAnnotations(..)
+                    | Attributes::RuntimeVisibleTypeAnnotations(..)
+                    | Attributes::RuntimeInvisibleTypeAnnotations(..)
+            ) {
+                return Err(ParsingError::InvalidClassAttributes);
+            }
 
-        match attribute {
-            Attributes::Value(cv) => {
+            if let Attributes::Record(z) = z {
+                for z in &z.components {
+                    for z in &z.attributes {
+                        if !matches!(
+                            z,
+                            Attributes::Signature(..)
+                                | Attributes::RuntimeVisibleAnnotations(..)
+                                | Attributes::RuntimeInvisibleAnnotations(..)
+                                | Attributes::RuntimeVisibleTypeAnnotations(..)
+                                | Attributes::RuntimeInvisibleTypeAnnotations(..)
+                        ) {
+                            return Err(ParsingError::InvalidRecordComponentInfoAttributes);
+                        }
+                    }
+                }
+            }
+        }
+
+        for i in &self.class.fields {
+            for z in &i.attributes {
                 if !matches!(
-                    cp[cv.value_index.to_u2() as usize],
-                    CpNode::Integer(_)
-                        | CpNode::Float(_)
-                        | CpNode::Long(_)
-                        | CpNode::Double(_)
-                        | CpNode::String(_)
+                    z,
+                    Attributes::Value(..)
+                        | Attributes::Synthetic(..)
+                        | Attributes::Deprecated(..)
+                        | Attributes::Signature(..)
+                        | Attributes::RuntimeVisibleAnnotations(..)
+                        | Attributes::RuntimeInvisibleAnnotations(..)
+                        | Attributes::RuntimeVisibleTypeAnnotations(..)
+                        | Attributes::RuntimeInvisibleTypeAnnotations(..)
                 ) {
-                    return Err(ParsingError::InvalidIndexFromAttributeToNodes(
-                        ErrorAttributes::Value,
-                        &[
-                            CpNodeError::Integer,
-                            CpNodeError::Float,
-                            CpNodeError::Long,
-                            CpNodeError::Double,
-                            CpNodeError::String,
-                        ],
-                        "value_index",
-                    ));
+                    return Err(ParsingError::InvalidFieldInfoAttributes);
                 }
             }
-            Attributes::Code(code) => {
-                let code_arr = code.code;
+        }
 
-                if code_arr.len() >= 65536 || code_arr.is_empty() {
-                    return Err(ParsingError::CodeAttributeCodeLength);
-                }
-
-                for y in &code.exception_table {
-                    if code_arr.get(y.start_pc.to_u2() as usize).is_none()
-                        || code_arr.get(y.end_pc.to_u2() as usize).is_none()
-                        || code_arr.get(y.handler_pc.to_u2() as usize).is_none()
-                    {
-                        return Err(ParsingError::InvalidIndexesInCodeAttribute);
-                    }
-
-                    if y.catch_type.to_u2() != 0
-                        && !matches!(cp[y.catch_type.to_u2() as usize], CpNode::Class(..))
-                    {
-                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                            ErrorAttributes::Code,
-                            CpNodeError::Class,
-                            "catch_type",
-                        ));
-                    }
+        for i in &self.class.methods {
+            for z in &i.attributes {
+                if !matches!(
+                    z,
+                    Attributes::Code(..)
+                        | Attributes::Exceptions(..)
+                        | Attributes::RuntimeVisibleAnnotations(..)
+                        | Attributes::RuntimeVisibleTypeAnnotations(..)
+                        | Attributes::RuntimeInvisibleAnnotations(..)
+                        | Attributes::RuntimeInvisibleTypeAnnotations(..)
+                        | Attributes::RuntimeVisibleParameterAnnotations(..)
+                        | Attributes::RuntimeInvisibleParameterAnnotations(..)
+                        | Attributes::AnnotationDefault(..)
+                        | Attributes::MethodParameters(..)
+                        | Attributes::Synthetic(..)
+                        | Attributes::Deprecated(..)
+                        | Attributes::Signature(..)
+                ) {
+                    return Err(ParsingError::InvalidMethodInfoAttributes);
                 }
 
-                for attr in code.attributes {
-                    self.verify_attributes(attr)?;
-                }
-            }
-            Attributes::StackMapTable(smt) => {
-                for smf in smt.entries {
-                    match smf {
-                        StackMapFrame::SameLocals1StackItemFrame(z) => {
-                            if let VerificationTypeInfo::ObjectVariableInfo(y) = z.stack {
-                                if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..)) {
-                                    return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                                        ErrorAttributes::StackMapTable,
-                                        CpNodeError::Class,
-                                        "cp_index",
-                                    ));
-                                }
-                            }
+                if let Attributes::Code(z) = z {
+                    for z in &z.attributes {
+                        if !matches!(
+                            z,
+                            Attributes::LineNumberTable(..)
+                                | Attributes::LocalVariableTable(..)
+                                | Attributes::LocalVariableTypeTable(..)
+                                | Attributes::StackMapTable(..)
+                                | Attributes::RuntimeVisibleTypeAnnotations(..)
+                                | Attributes::RuntimeInvisibleTypeAnnotations(..)
+                        ) {
+                            return Err(ParsingError::InvalidCodeAttributes);
                         }
-                        StackMapFrame::SameLocals1StackItemFrameExtended(z) => {
-                            if let VerificationTypeInfo::ObjectVariableInfo(y) = z.stack {
-                                if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..)) {
-                                    return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                                        ErrorAttributes::StackMapTable,
-                                        CpNodeError::Class,
-                                        "cp_index",
-                                    ));
-                                }
-                            }
-                        }
-                        StackMapFrame::AppendFrame(z) => {
-                            for i in z.locals {
-                                if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
-                                    if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
-                                    {
-                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                                            ErrorAttributes::StackMapTable,
-                                            CpNodeError::Class,
-                                            "cp_index",
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-                        StackMapFrame::FullFrame(z) => {
-                            for i in z.locals {
-                                if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
-                                    if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
-                                    {
-                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                                            ErrorAttributes::StackMapTable,
-                                            CpNodeError::Class,
-                                            "cp_index",
-                                        ));
-                                    }
-                                }
-                            }
-                            for i in z.stack {
-                                if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
-                                    if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
-                                    {
-                                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                                            ErrorAttributes::StackMapTable,
-                                            CpNodeError::Class,
-                                            "cp_index",
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-                        _ => {}
                     }
                 }
             }
-            Attributes::Exceptions(exception) => {
-                for i in exception.exception_index_table {
-                    if !matches!(cp[i.to_u2() as usize], CpNode::Class(..)) {
-                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                            ErrorAttributes::Exceptions,
-                            CpNodeError::Class,
-                            "exception_index_table",
-                        ));
-                    }
-                }
-            }
-            Attributes::InnerClass(innerclass) => {
-                for k in innerclass.classes {
-                    if let CpNode::Class(y) = &cp[k.inner_class_info_index.to_u2() as usize] {
-                        #[allow(non_snake_case)]
-                        let C = y;
-                        todo!()
-                    } else {
-                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
-                            ErrorAttributes::InnerClass,
-                            CpNodeError::Class,
-                            "inner_class_info_index",
-                        ));
-                    }
-                }
-            }
-            Attributes::EnclosingMethod(enclosingmethod) => {}
-            Attributes::Synthetic(_) => todo!(),
-            Attributes::Signature(_) => todo!(),
-            Attributes::SourceFile(_) => todo!(),
-            Attributes::SourceDebugExt(_) => todo!(),
-            Attributes::LineNumberTable(_) => todo!(),
-            Attributes::LocalVariableTable(_) => todo!(),
-            Attributes::LocalVariableTypeTable(_) => todo!(),
-            Attributes::Deprecated(_) => todo!(),
-            Attributes::RuntimeVisibleAnnotations(_) => todo!(),
-            Attributes::RuntimeInvisibleAnnotations(_) => todo!(),
-            Attributes::RuntimeVisibleParameterAnnotations(_) => todo!(),
-            Attributes::RuntimeInvisibleParameterAnnotations(_) => todo!(),
-            Attributes::RuntimeVisibleTypeAnnotations(_) => todo!(),
-            Attributes::RuntimeInvisibleTypeAnnotations(_) => todo!(),
-            Attributes::AnnotationDefault(_) => todo!(),
-            Attributes::BootstrapMethods(_) => todo!(),
-            Attributes::MethodParameters(_) => todo!(),
-            Attributes::Module(_) => todo!(),
-            Attributes::ModulePackages(_) => todo!(),
-            Attributes::ModuleMainClass(_) => todo!(),
-            Attributes::NestHost(_) => todo!(),
-            Attributes::NestMembers(_) => todo!(),
-            Attributes::Record(_) => todo!(),
-            Attributes::PermittedSubclasses(_) => todo!(),
         }
 
         Ok(())
+    }
+
+    fn verify_attributes_internal(&self, attribute: Attributes) -> Result<(), ParsingError<'a>>
+    {
+        let cp = &self.class.cp;
+        Ok(())
+
+        // match attribute {
+        //     Attributes::Value(cv) => {
+        //         if !matches!(
+        //             cp[cv.value_index.to_u2() as usize],
+        //             CpNode::Integer(_)
+        //                 | CpNode::Float(_)
+        //                 | CpNode::Long(_)
+        //                 | CpNode::Double(_)
+        //                 | CpNode::String(_)
+        //         ) {
+        //             return Err(ParsingError::InvalidIndexFromAttributeToNodes(
+        //                 ErrorAttributes::Value,
+        //                 &[
+        //                     CpNodeError::Integer,
+        //                     CpNodeError::Float,
+        //                     CpNodeError::Long,
+        //                     CpNodeError::Double,
+        //                     CpNodeError::String,
+        //                 ],
+        //                 "value_index",
+        //             ));
+        //         }
+        //     }
+        //     Attributes::Code(code) => {
+        //         let code_arr = code.code;
+
+        //         if code_arr.len() >= 65536 || code_arr.is_empty() {
+        //             return Err(ParsingError::CodeAttributeCodeLength);
+        //         }
+
+        //         for y in &code.exception_table {
+        //             if code_arr.get(y.start_pc.to_u2() as usize).is_none()
+        //                 || code_arr.get(y.end_pc.to_u2() as usize).is_none()
+        //                 || code_arr.get(y.handler_pc.to_u2() as usize).is_none()
+        //             {
+        //                 return Err(ParsingError::InvalidIndexesInCodeAttribute);
+        //             }
+
+        //             if y.catch_type.to_u2() != 0
+        //                 && !matches!(cp[y.catch_type.to_u2() as usize], CpNode::Class(..))
+        //             {
+        //                 return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                     ErrorAttributes::Code,
+        //                     CpNodeError::Class,
+        //                     "catch_type",
+        //                 ));
+        //             }
+        //         }
+
+        //         for attr in code.attributes {
+        //             self.verify_attributes(attr)?;
+        //         }
+        //     }
+        //     Attributes::StackMapTable(smt) => {
+        //         for smf in smt.entries {
+        //             match smf {
+        //                 StackMapFrame::SameLocals1StackItemFrame(z) => {
+        //                     if let VerificationTypeInfo::ObjectVariableInfo(y) = z.stack {
+        //                         if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..)) {
+        //                             return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                                 ErrorAttributes::StackMapTable,
+        //                                 CpNodeError::Class,
+        //                                 "cp_index",
+        //                             ));
+        //                         }
+        //                     }
+        //                 }
+        //                 StackMapFrame::SameLocals1StackItemFrameExtended(z) => {
+        //                     if let VerificationTypeInfo::ObjectVariableInfo(y) = z.stack {
+        //                         if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..)) {
+        //                             return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                                 ErrorAttributes::StackMapTable,
+        //                                 CpNodeError::Class,
+        //                                 "cp_index",
+        //                             ));
+        //                         }
+        //                     }
+        //                 }
+        //                 StackMapFrame::AppendFrame(z) => {
+        //                     for i in z.locals {
+        //                         if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
+        //                             if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
+        //                             {
+        //                                 return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                                     ErrorAttributes::StackMapTable,
+        //                                     CpNodeError::Class,
+        //                                     "cp_index",
+        //                                 ));
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //                 StackMapFrame::FullFrame(z) => {
+        //                     for i in z.locals {
+        //                         if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
+        //                             if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
+        //                             {
+        //                                 return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                                     ErrorAttributes::StackMapTable,
+        //                                     CpNodeError::Class,
+        //                                     "cp_index",
+        //                                 ));
+        //                             }
+        //                         }
+        //                     }
+        //                     for i in z.stack {
+        //                         if let VerificationTypeInfo::ObjectVariableInfo(y) = i {
+        //                             if !matches!(cp[y.cp_index.to_u2() as usize], CpNode::Class(..))
+        //                             {
+        //                                 return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                                     ErrorAttributes::StackMapTable,
+        //                                     CpNodeError::Class,
+        //                                     "cp_index",
+        //                                 ));
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //                 _ => {}
+        //             }
+        //         }
+        //     }
+        //     Attributes::Exceptions(exception) => {
+        //         for i in exception.exception_index_table {
+        //             if !matches!(cp[i.to_u2() as usize], CpNode::Class(..)) {
+        //                 return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                     ErrorAttributes::Exceptions,
+        //                     CpNodeError::Class,
+        //                     "exception_index_table",
+        //                 ));
+        //             }
+        //         }
+        //     }
+        //     Attributes::InnerClass(innerclass) => {
+        //         for k in innerclass.classes {
+        //             if let CpNode::Class(y) = &cp[k.inner_class_info_index.to_u2() as usize] {
+        //                 #[allow(non_snake_case)]
+        //                 let C = y;
+        //             } else {
+        //                 return Err(ParsingError::InvalidIndexFromAttributeToNode(
+        //                     ErrorAttributes::InnerClass,
+        //                     CpNodeError::Class,
+        //                     "inner_class_info_index",
+        //                 ));
+        //             }
+        //         }
+        //     }
+        //     Attributes::EnclosingMethod(enclosingmethod) => {}
+        //     Attributes::Synthetic(_) => todo!(),
+        //     Attributes::Signature(_) => todo!(),
+        //     Attributes::SourceFile(_) => todo!(),
+        //     Attributes::SourceDebugExt(_) => todo!(),
+        //     Attributes::LineNumberTable(_) => todo!(),
+        //     Attributes::LocalVariableTable(_) => todo!(),
+        //     Attributes::LocalVariableTypeTable(_) => todo!(),
+        //     Attributes::Deprecated(_) => todo!(),
+        //     Attributes::RuntimeVisibleAnnotations(_) => todo!(),
+        //     Attributes::RuntimeInvisibleAnnotations(_) => todo!(),
+        //     Attributes::RuntimeVisibleParameterAnnotations(_) => todo!(),
+        //     Attributes::RuntimeInvisibleParameterAnnotations(_) => todo!(),
+        //     Attributes::RuntimeVisibleTypeAnnotations(_) => todo!(),
+        //     Attributes::RuntimeInvisibleTypeAnnotations(_) => todo!(),
+        //     Attributes::AnnotationDefault(_) => todo!(),
+        //     Attributes::BootstrapMethods(_) => todo!(),
+        //     Attributes::MethodParameters(_) => todo!(),
+        //     Attributes::Module(_) => todo!(),
+        //     Attributes::ModulePackages(_) => todo!(),
+        //     Attributes::ModuleMainClass(_) => todo!(),
+        //     Attributes::NestHost(_) => todo!(),
+        //     Attributes::NestMembers(_) => todo!(),
+        //     Attributes::Record(_) => todo!(),
+        //     Attributes::PermittedSubclasses(_) => todo!(),
+        // }
+
+        // Ok(())
     }
 
     fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>>

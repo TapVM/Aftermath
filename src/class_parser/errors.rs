@@ -160,4 +160,44 @@ pub enum ParsingError<'a>
     • handler_pc
     ")]
     InvalidIndexesInCodeAttribute,
+
+    #[error(
+        "Malformed class -> The Class file had attributes which weren't from the following list
+    • SourceFile
+    • InnerClass
+    • SourceDebugExt
+    • BootstrapMethods
+    • Module
+    • ModulePackages
+    • ModuleMainClass
+    • NestHost
+    • NestMembers
+    • Record
+    • PermittedSubclasses
+    • Synthetic
+    • Deprecated
+    • Signature
+    • RuntimeVisibleAnnotations
+    • RuntimeInvisibleAnnotations
+    • RuntimeVisibleTypeAnnotations
+    • RuntimeInvisibleTypeAnnotations, which is illegal."
+    )]
+    InvalidClassAttributes,
+    #[error("Malformed class -> The fields in the Class file had attributes weren't from the following list
+    • ConstantValue
+    • Synthetic
+    • Deprecated
+    • Signature
+    • RuntimeVisibleAnnotations
+    • RuntimeInvisibleAnnotations
+    • RuntimeVisibleTypeAnnotations
+    • RuntimeVisibleTypeAnnotations"
+    )]
+    InvalidFieldInfoAttributes,
+    #[error("TODO")]
+    InvalidMethodInfoAttributes,
+    #[error("TODO")]
+    InvalidCodeAttributes,
+    #[error("TODO")]
+    InvalidRecordComponentInfoAttributes,
 }
