@@ -132,6 +132,47 @@ impl<'a> Verifier<'a>
         Ok(self.class)
     }
 
+    fn verify_class_attributes(&self) -> Result<(), ParsingError<'a>>
+    {
+        let class_attributes = &self.class.attributes;
+        let cp = &self.class.cp;
+
+        for z in class_attributes {
+            match z {
+                Attributes::SourceFile(z) => {
+                    if !matches!(&cp[z.sourcefile_index.to_u2() as usize], CpNode::Utf8(..)) {
+                        return Err(ParsingError::InvalidIndexFromAttributeToNode(
+                            ErrorAttributes::SourceFile,
+                            CpNodeError::Utf8,
+                            "sourcefile_index",
+                        ));
+                    }
+                }
+                Attributes::InnerClass(z) => {}
+                Attributes::EnclosingMethod(z) => {}
+                Attributes::SourceDebugExt(z) => {}
+                Attributes::BootstrapMethods(z) => {}
+                Attributes::Module(z) => {}
+                Attributes::ModulePackages(z) => {}
+                Attributes::ModuleMainClass(z) => {}
+                Attributes::NestHost(z) => {}
+                Attributes::NestMembers(z) => {}
+                Attributes::Record(z) => {}
+                Attributes::PermittedSubclasses(z) => {}
+                Attributes::Synthetic(z) => {}
+                Attributes::Deprecated(z) => {}
+                Attributes::Signature(z) => {}
+                Attributes::RuntimeVisibleAnnotations(z) => {}
+                Attributes::RuntimeInvisibleAnnotations(z) => {}
+                Attributes::RuntimeVisibleTypeAnnotations(z) => {}
+                Attributes::RuntimeInvisibleTypeAnnotations(z) => {}
+                _ => unreachable!(),
+            }
+        }
+
+        Ok(())
+    }
+
     fn verify_attributes(&self) -> Result<(), ParsingError<'a>>
     {
         for z in &self.class.attributes {
@@ -235,6 +276,9 @@ impl<'a> Verifier<'a>
             }
         }
 
+        // -----------------------------------------------------------------------------------------
+
+        self.verify_class_attributes()?;
         Ok(())
     }
 
