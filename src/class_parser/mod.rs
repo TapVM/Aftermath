@@ -1351,7 +1351,7 @@ impl<'class> Parser<'class>
     {
         let mut attributes = Vec::with_capacity(length as usize);
 
-        while attributes.len() < length as usize {
+        for _ in 0..length as usize {
             let attribute_name_index = self.u2();
             let attribute_length = self.u4();
             let tag = &cp[attribute_name_index.to_u2() as usize - 1];
@@ -1894,8 +1894,6 @@ impl<'class> Parser<'class>
 
         let attributes_count = self.u2();
         let attributes = self.attributes(attributes_count.to_u2(), &cp)?;
-
-        assert!(self.bytes.is_empty());
 
         Ok(ClassFile {
             minor_v,
