@@ -11,3 +11,6 @@ perf.data.old
 
 # Mypy
 .mypy_cache
+
+# JetBrains IDEs
+.idea
