@@ -66,7 +66,24 @@ function advancedtest()
     exit(0)
 end
 
-function classbasket() end
+function classbasket()
+    print("\n$(GREEN)Building classbasket")
+
+    try
+        for (_, _, files) in walkdir("./class_basket/")
+            for file in Iterators.filter((z) -> endswith(z, ".java"), files)
+                run(`javac ./class_basket/$file`)
+                print(".")
+            end
+        end
+    catch
+        println("\n$(RED)Build failed.$RESET")
+        println(BUILD_FAILURE)
+        exit(1)
+    end
+
+    println(" Done! $RESET\n")
+end
 
 if length(ARGS) == 0
     println("""
