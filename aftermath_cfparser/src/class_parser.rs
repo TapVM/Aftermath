@@ -14,7 +14,7 @@ pub struct U2([u8; 2]);
 
 impl Debug for U2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", u16::from_be_bytes(self.0))
+        write!(f, "{}", self.to_u2())
     }
 }
 
