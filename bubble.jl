@@ -66,6 +66,8 @@ function advancedtest()
     exit(0)
 end
 
+function classbasket() end
+
 if length(ARGS) == 0
     println("""
 
