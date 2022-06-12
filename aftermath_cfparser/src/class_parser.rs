@@ -1,8 +1,6 @@
 #![allow(dead_code)]
 
-mod errors;
-pub mod verification;
-
+use super::errors;
 pub use errors::Attributes as ErrorAttributes;
 pub use errors::ParsingError;
 use std::fmt::Debug;
@@ -135,290 +133,290 @@ pub enum VerificationTypeInfo {
 
 #[derive(Debug)]
 pub struct SameFrame {
-    frame_type: u8,
+    pub frame_type: u8,
 }
 
 #[derive(Debug)]
 pub struct SameLocals1StackItemFrame {
-    frame_type: u8,
-    stack: VerificationTypeInfo,
+    pub frame_type: u8,
+    pub stack: VerificationTypeInfo,
 }
 
 #[derive(Debug)]
 pub struct SameLocals1StackItemFrameExtended {
-    frame_type: u8,
-    offset_delta: U2,
-    stack: VerificationTypeInfo,
+    pub frame_type: u8,
+    pub offset_delta: U2,
+    pub stack: VerificationTypeInfo,
 }
 
 #[derive(Debug)]
 pub struct ChopFrame {
-    frame_type: u8,
-    offset_delta: U2,
+    pub frame_type: u8,
+    pub offset_delta: U2,
 }
 
 #[derive(Debug)]
 pub struct SameFrameExtended {
-    frame_type: u8,
-    offset_delta: U2,
+    pub frame_type: u8,
+    pub offset_delta: U2,
 }
 
 #[derive(Debug)]
 pub struct AppendFrame {
-    frame_type: u8,
-    offset_delta: U2,
-    locals: Vec<VerificationTypeInfo>,
+    pub frame_type: u8,
+    pub offset_delta: U2,
+    pub locals: Vec<VerificationTypeInfo>,
 }
 
 #[derive(Debug)]
 pub struct FullFrame {
-    frame_type: u8,
-    offset_delta: U2,
-    locals: Vec<VerificationTypeInfo>,
-    stack: Vec<VerificationTypeInfo>,
+    pub frame_type: u8,
+    pub offset_delta: U2,
+    pub locals: Vec<VerificationTypeInfo>,
+    pub stack: Vec<VerificationTypeInfo>,
 }
 
 #[derive(Debug)]
 pub struct TopVariableInfo {
-    tag: u8,
+    pub tag: u8,
 }
 
 #[derive(Debug)]
 pub struct IntegerVariableInfo {
-    tag: u8,
+    pub tag: u8,
 }
 
 #[derive(Debug)]
 pub struct FloatVariableInfo {
-    tag: u8,
+    pub tag: u8,
 }
 
 #[derive(Debug)]
 pub struct DoubleVariableInfo {
-    tag: u8,
+    pub tag: u8,
 }
 
 #[derive(Debug)]
 pub struct LongVariableInfo {
-    tag: u8,
+    pub tag: u8,
 }
 
 #[derive(Debug)]
 pub struct NullVariableInfo {
-    tag: u8,
+    pub tag: u8,
 }
 
 #[derive(Debug)]
 pub struct UninitializedThisVariableInfo {
-    tag: u8,
+    pub tag: u8,
 }
 
 #[derive(Debug)]
 pub struct ObjectVariableInfo {
-    tag: u8,
-    cp_index: U2,
+    pub tag: u8,
+    pub cp_index: U2,
 }
 
 #[derive(Debug)]
 pub struct UninitializedVariableInfo {
-    tag: u8,
-    offset: U2,
+    pub tag: u8,
+    pub offset: U2,
 }
 
 #[derive(Debug)]
 pub struct PermittedSubclasses<'class> {
-    classes: &'class [U2],
+    pub classes: &'class [U2],
 }
 
 #[derive(Debug)]
 pub struct RecordComponentInfo<'class> {
-    name_index: U2,
-    descriptor_index: U2,
-    attributes: Vec<Attributes<'class>>,
+    pub name_index: U2,
+    pub descriptor_index: U2,
+    pub attributes: Vec<Attributes<'class>>,
 }
 
 #[derive(Debug)]
 pub struct Record<'class> {
-    components: Vec<RecordComponentInfo<'class>>,
+    pub components: Vec<RecordComponentInfo<'class>>,
 }
 
 #[derive(Debug)]
 pub struct ModulePackages<'class> {
-    package_index: &'class [U2],
+    pub package_index: &'class [U2],
 }
 
 #[derive(Debug)]
 pub struct ModuleMainClass {
-    main_class_index: U2,
+    pub main_class_index: U2,
 }
 
 #[derive(Debug)]
 pub struct NestHost {
-    host_class_index: U2,
+    pub host_class_index: U2,
 }
 
 #[derive(Debug)]
 pub struct NestMembers<'class> {
-    classes: &'class [U2],
+    pub classes: &'class [U2],
 }
 
 #[derive(Debug)]
 pub struct ModuleRequires {
-    requires_index: U2,
-    requires_flags: U2,
-    require_version_index: U2,
+    pub requires_index: U2,
+    pub requires_flags: U2,
+    pub require_version_index: U2,
 }
 
 #[derive(Debug)]
 pub struct ModuleExports<'class> {
-    exports_index: U2,
-    exports_flags: U2,
-    exports_to_index: &'class [U2],
+    pub exports_index: U2,
+    pub exports_flags: U2,
+    pub exports_to_index: &'class [U2],
 }
 
 #[derive(Debug)]
 pub struct ModuleOpens<'class> {
-    opens_index: U2,
-    opens_flags: U2,
-    opens_to_index: &'class [U2],
+    pub opens_index: U2,
+    pub opens_flags: U2,
+    pub opens_to_index: &'class [U2],
 }
 
 #[derive(Debug)]
 pub struct ModuleProvides<'class> {
-    provides_index: U2,
-    provides_with_index: &'class [U2],
+    pub provides_index: U2,
+    pub provides_with_index: &'class [U2],
 }
 
 #[derive(Debug)]
 pub struct Module<'class> {
-    module_name_index: U2,
-    module_flags: U2,
-    module_version_index: U2,
-    requires: Vec<ModuleRequires>,
-    exports: Vec<ModuleExports<'class>>,
-    opens: Vec<ModuleOpens<'class>>,
-    uses_index: &'class [U2],
-    provides: Vec<ModuleProvides<'class>>,
+    pub module_name_index: U2,
+    pub module_flags: U2,
+    pub module_version_index: U2,
+    pub requires: Vec<ModuleRequires>,
+    pub exports: Vec<ModuleExports<'class>>,
+    pub opens: Vec<ModuleOpens<'class>>,
+    pub uses_index: &'class [U2],
+    pub provides: Vec<ModuleProvides<'class>>,
 }
 
 #[derive(Debug)]
 pub struct MethodParametersInner {
-    name_index: U2,
-    access_flags: U2,
+    pub name_index: U2,
+    pub access_flags: U2,
 }
 
 #[derive(Debug)]
 pub struct MethodParameters {
-    parameters: Vec<MethodParametersInner>,
+    pub parameters: Vec<MethodParametersInner>,
 }
 
 #[derive(Debug)]
 pub struct AnnotationDefault {
-    default_value: ElementValue,
+    pub default_value: ElementValue,
 }
 
 #[derive(Debug)]
 pub struct RuntimeInvisibleTypeAnnotations {
-    annotations: Vec<TypeAnnotation>,
+    pub annotations: Vec<TypeAnnotation>,
 }
 
 #[derive(Debug)]
 pub struct TypePathInner {
-    type_path_kind: U1,
-    type_argument_index: U1,
+    pub type_path_kind: U1,
+    pub type_argument_index: U1,
 }
 
 #[derive(Debug)]
 pub struct TypePath {
-    path: Vec<TypePathInner>,
+    pub path: Vec<TypePathInner>,
 }
 
 #[derive(Debug)]
 pub struct TypeAnnotationInner {
-    element_name_index: U2,
-    value: ElementValue,
+    pub element_name_index: U2,
+    pub value: ElementValue,
 }
 
 #[derive(Debug)]
 pub struct TypeAnnotation {
-    target_info: TargetInfo,
-    target_path: TypePath,
-    type_index: U2,
-    num_element_value_pairs: U2,
-    element_value_pairs: Vec<TypeAnnotationInner>,
+    pub target_info: TargetInfo,
+    pub target_path: TypePath,
+    pub type_index: U2,
+    pub num_element_value_pairs: U2,
+    pub element_value_pairs: Vec<TypeAnnotationInner>,
 }
 
 #[derive(Debug)]
 pub struct RuntimeVisibleTypeAnnotations {
-    type_annotation: Vec<TypeAnnotation>,
+    pub type_annotation: Vec<TypeAnnotation>,
 }
 
 #[derive(Debug)]
 pub struct RuntimeInvisibleAnnotations {
-    annotations: Vec<Annotation>,
+    pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug)]
 pub struct ParameterAnnotationsRuntimeParameterAnnotationsAttr {
-    annotations: Vec<Annotation>,
+    pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug)]
 pub struct RuntimeInvisibleParameterAnnotations {
-    parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
+    pub parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
 }
 
 #[derive(Debug)]
 pub struct RuntimeVisibleParameterAnnotations {
-    parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
+    pub parameter_annotations: Vec<ParameterAnnotationsRuntimeParameterAnnotationsAttr>,
 }
 
 #[derive(Debug)]
 pub struct EnumConstValue {
-    type_name_index: U2,
-    const_name_index: U2,
+    pub type_name_index: U2,
+    pub const_name_index: U2,
 }
 
 #[derive(Debug)]
 pub struct ArrayValue {
-    element_value: Vec<ElementValue>,
+    pub element_value: Vec<ElementValue>,
 }
 
 #[derive(Debug)]
 pub struct AnnotationInner {
-    element_name_index: U2,
-    value: ElementValue,
+    pub element_name_index: U2,
+    pub value: ElementValue,
 }
 
 #[derive(Debug)]
 pub struct Annotation {
-    type_index: U2,
-    element_value_pairs: Vec<AnnotationInner>,
+    pub type_index: U2,
+    pub element_value_pairs: Vec<AnnotationInner>,
 }
 
 #[derive(Debug)]
 pub struct RuntimeVisibleAnnotations {
-    annotations: Vec<Annotation>,
+    pub annotations: Vec<Annotation>,
 }
 
 #[derive(Debug)]
 pub struct LineNumberTableAttrInner {
-    start_pc: U2,
-    line_number: U2,
+    pub start_pc: U2,
+    pub line_number: U2,
 }
 
 #[derive(Debug)]
 pub struct LocalVariableTypeTableAttrInner {
-    start_pc: U2,
-    length: U2,
-    name_index: U2,
-    signature_index: U2,
-    index: U2,
+    pub start_pc: U2,
+    pub length: U2,
+    pub name_index: U2,
+    pub signature_index: U2,
+    pub index: U2,
 }
 
 #[derive(Debug)]
 pub struct LocalVariableTypeTable {
-    local_variable_type_table: Vec<LocalVariableTypeTableAttrInner>,
+    pub local_variable_type_table: Vec<LocalVariableTypeTableAttrInner>,
 }
 
 #[derive(Debug)]
@@ -426,43 +424,43 @@ pub struct Deprecated;
 
 #[derive(Debug)]
 pub struct LocalVariableTableAttrInner {
-    start_pc: U2,
-    length: U2,
-    name_index: U2,
-    descriptor_index: U2,
-    index: U2,
+    pub start_pc: U2,
+    pub length: U2,
+    pub name_index: U2,
+    pub descriptor_index: U2,
+    pub index: U2,
 }
 
 #[derive(Debug)]
 pub struct LocalVariableTable {
-    local_variable_table: Vec<LocalVariableTableAttrInner>,
+    pub local_variable_table: Vec<LocalVariableTableAttrInner>,
 }
 
 #[derive(Debug)]
 pub struct LineNumberTable {
-    line_number_table: Vec<LineNumberTableAttrInner>,
+    pub line_number_table: Vec<LineNumberTableAttrInner>,
 }
 
 #[derive(Debug)]
 pub struct SourceDebugExt<'class> {
-    debug_extension: &'class [U1],
+    pub debug_extension: &'class [U1],
 }
 
 #[derive(Debug)]
 pub struct ExceptionTableAttrCode {
-    start_pc: U2,
-    end_pc: U2,
-    handler_pc: U2,
-    catch_type: U2,
+    pub start_pc: U2,
+    pub end_pc: U2,
+    pub handler_pc: U2,
+    pub catch_type: U2,
 }
 
 #[derive(Debug)]
 pub struct AttrCode<'class> {
-    max_stack: U2,
-    max_locals: U2,
-    code: &'class [U1],
-    exception_table: Vec<ExceptionTableAttrCode>,
-    attributes: Vec<Attributes<'class>>,
+    pub max_stack: U2,
+    pub max_locals: U2,
+    pub code: &'class [U1],
+    pub exception_table: Vec<ExceptionTableAttrCode>,
+    pub attributes: Vec<Attributes<'class>>,
 }
 
 #[derive(Debug)]
@@ -470,57 +468,57 @@ pub struct Synthetic;
 
 #[derive(Debug)]
 pub struct Signature {
-    signature_index: U2,
+    pub signature_index: U2,
 }
 
 #[derive(Debug)]
 pub struct SourceFile {
-    sourcefile_index: U2,
+    pub sourcefile_index: U2,
 }
 
 #[derive(Debug)]
 pub struct EnclosingMethod {
-    class_index: U2,
-    method_index: U2,
+    pub class_index: U2,
+    pub method_index: U2,
 }
 
 #[derive(Debug)]
 pub struct ClassesInnerClassAttr {
-    inner_class_info_index: U2,
-    outer_class_info_index: U2,
-    inner_name_index: U2,
-    inner_class_access_flags: U2,
+    pub inner_class_info_index: U2,
+    pub outer_class_info_index: U2,
+    pub inner_name_index: U2,
+    pub inner_class_access_flags: U2,
 }
 
 #[derive(Debug)]
 pub struct InnerClass {
-    classes: Vec<ClassesInnerClassAttr>,
+    pub classes: Vec<ClassesInnerClassAttr>,
 }
 
 #[derive(Debug)]
 pub struct StackMapTable {
-    entries: Vec<StackMapFrame>,
+    pub entries: Vec<StackMapFrame>,
 }
 
 #[derive(Debug)]
 pub struct BootStrapMethodsInner<'class> {
-    bootstrap_method_ref: U2,
-    bootstrap_arguments: &'class [U2],
+    pub bootstrap_method_ref: U2,
+    pub bootstrap_arguments: &'class [U2],
 }
 
 #[derive(Debug)]
 pub struct BootStrapMethods<'class> {
-    bootstrap_methods: Vec<BootStrapMethodsInner<'class>>,
+    pub bootstrap_methods: Vec<BootStrapMethodsInner<'class>>,
 }
 
 #[derive(Debug)]
 pub struct Value {
-    value_index: U2,
+    pub value_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Exceptions<'class> {
-    exception_index_table: &'class [U2],
+    pub exception_index_table: &'class [U2],
 }
 
 #[derive(Debug)]
@@ -555,150 +553,150 @@ pub struct ClassFile<'class> {
 
 #[derive(Debug)]
 pub struct TypeParameterTarget {
-    type_parameter_index: U1,
+    pub type_parameter_index: U1,
 }
 
 #[derive(Debug)]
 pub struct Supertype {
-    supertype_index: U2,
+    pub supertype_index: U2,
 }
 
 #[derive(Debug)]
 pub struct TypeParameterBound {
-    type_parameter_index: U1,
-    bound_index: U1,
+    pub type_parameter_index: U1,
+    pub bound_index: U1,
 }
 
 #[derive(Debug)]
 pub struct FormalParameter {
-    formal_parameter_index: U1,
+    pub formal_parameter_index: U1,
 }
 
 #[derive(Debug)]
 pub struct Throws {
-    throws_type_index: U1,
+    pub throws_type_index: U1,
 }
 
 #[derive(Debug)]
 pub struct Localvar {
-    table: Vec<LocalvarInner>,
+    pub table: Vec<LocalvarInner>,
 }
 
 #[derive(Debug)]
 pub struct LocalvarInner {
-    start_pc: U2,
-    length: U2,
-    index: U2,
+    pub start_pc: U2,
+    pub length: U2,
+    pub index: U2,
 }
 
 #[derive(Debug)]
 pub struct Catch {
-    exception_table_index: U2,
+    pub exception_table_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Offset {
-    offset: U2,
+    pub offset: U2,
 }
 
 #[derive(Debug)]
 pub struct TypeArgument {
-    offset: U2,
-    type_argument_index: U1,
+    pub offset: U2,
+    pub type_argument_index: U1,
 }
 
 #[derive(Debug)]
 pub struct Class {
-    name_index: U2,
+    pub name_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Fieldref {
-    class_index: U2,
-    name_and_type_index: U2,
+    pub class_index: U2,
+    pub name_and_type_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Methodref {
-    class_index: U2,
-    name_and_type_index: U2,
+    pub class_index: U2,
+    pub name_and_type_index: U2,
 }
 
 #[derive(Debug)]
 pub struct InterfaceMethodref {
-    class_index: U2,
-    name_and_type_index: U2,
+    pub class_index: U2,
+    pub name_and_type_index: U2,
 }
 
 #[derive(Debug)]
 pub struct StringCp {
-    string_index: U2,
+    pub string_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Integer {
-    bytes: U4,
+    pub bytes: U4,
 }
 
 #[derive(Debug)]
 pub struct Float {
-    bytes: U4,
+    pub bytes: U4,
 }
 
 #[derive(Debug)]
 pub struct Long {
-    high_bytes: U4,
-    low_bytes: U4,
+    pub high_bytes: U4,
+    pub low_bytes: U4,
 }
 
 #[derive(Debug)]
 pub struct Double {
-    high_bytes: U4,
-    low_bytes: U4,
+    pub high_bytes: U4,
+    pub low_bytes: U4,
 }
 
 #[derive(Debug)]
 pub struct NameAndType {
-    name_index: U2,
-    descriptor_index: U2,
+    pub name_index: U2,
+    pub descriptor_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Utf8<'class> {
-    bytes: &'class str,
+    pub bytes: &'class str,
 }
 
 #[derive(Debug)]
 pub struct MethodHandle {
-    reference_kind: u8,
-    reference_index: U2,
+    pub reference_kind: u8,
+    pub reference_index: U2,
 }
 
 #[derive(Debug)]
 pub struct MethodType {
-    descriptor_index: U2,
+    pub descriptor_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Dynamic {
-    bootstrap_method_attr_index: U2,
-    name_and_type_index: U2,
+    pub bootstrap_method_attr_index: U2,
+    pub name_and_type_index: U2,
 }
 
 #[derive(Debug)]
 pub struct InvokeDynamic {
-    bootstrap_method_attr_index: U2,
-    name_and_type_index: U2,
+    pub bootstrap_method_attr_index: U2,
+    pub name_and_type_index: U2,
 }
 
 #[derive(Debug)]
 pub struct ModuleCp {
-    name_index: U2,
+    pub name_index: U2,
 }
 
 #[derive(Debug)]
 pub struct Package {
-    name_index: U2,
+    pub name_index: U2,
 }
 // -------------------------------------------------------------------------------------------------
 
@@ -709,7 +707,7 @@ pub struct Parser<'class> {
 }
 
 impl<'class> Utf8<'class> {
-    fn verify_binary_class_or_interface_name(&self) -> Result<(), ParsingError<'class>> {
+    pub fn verify_binary_class_or_interface_name(&self) -> Result<(), ParsingError<'class>> {
         for char in self.bytes.chars() {
             if char == '.' {
                 return Err(ParsingError::BinaryNameContainsDot);

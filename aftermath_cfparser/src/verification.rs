@@ -1,17 +1,14 @@
+use super::class_parser::{Attributes, ClassFile, CpNode, ParsingError};
+use super::errors::Attributes as ErrorAttributes;
 use super::errors::CpNodeError;
-use super::ErrorAttributes;
-use super::{Attributes, ClassFile, CpNode, ParsingError, StackMapFrame, VerificationTypeInfo};
 
-pub struct Verifier<'a>
-{
+pub struct Verifier<'a> {
     class: ClassFile<'a>,
     bootstrap_methods: Vec<usize>,
 }
 
-impl<'a> Verifier<'a>
-{
-    pub fn new(class: ClassFile<'a>) -> Self
-    {
+impl<'a> Verifier<'a> {
+    pub fn new(class: ClassFile<'a>) -> Self {
         let bootstrap_methods: Vec<_> = class
             .attributes
             .iter()
@@ -31,8 +28,7 @@ impl<'a> Verifier<'a>
         }
     }
 
-    pub fn verify(self) -> Result<ClassFile<'a>, ParsingError<'a>>
-    {
+    pub fn verify(self) -> Result<ClassFile<'a>, ParsingError<'a>> {
         let class = &self.class;
 
         let major_v = class.major_v.to_u2();
@@ -132,8 +128,7 @@ impl<'a> Verifier<'a>
         Ok(self.class)
     }
 
-    fn verify_class_attributes(&self) -> Result<(), ParsingError<'a>>
-    {
+    fn verify_class_attributes(&self) -> Result<(), ParsingError<'a>> {
         let class_attributes = &self.class.attributes;
         let cp = &self.class.cp;
 
@@ -173,8 +168,7 @@ impl<'a> Verifier<'a>
         Ok(())
     }
 
-    fn verify_attributes(&self) -> Result<(), ParsingError<'a>>
-    {
+    fn verify_attributes(&self) -> Result<(), ParsingError<'a>> {
         for z in &self.class.attributes {
             if !matches!(
                 z,
@@ -282,8 +276,7 @@ impl<'a> Verifier<'a>
         Ok(())
     }
 
-    fn verify_attributes_internal(&self, attribute: Attributes) -> Result<(), ParsingError<'a>>
-    {
+    fn verify_attributes_internal(&self, attribute: Attributes) -> Result<(), ParsingError<'a>> {
         let cp = &self.class.cp;
         Ok(())
 
@@ -464,8 +457,7 @@ impl<'a> Verifier<'a>
         // Ok(())
     }
 
-    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>>
-    {
+    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>> {
         let cp = &self.class.cp;
         let bootstrap_methods = &self.bootstrap_methods;
 
