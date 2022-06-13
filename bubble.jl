@@ -1,12 +1,14 @@
+include("./BubbleScripts/namespace.jl")
+
 # ANSI Colors ✨
-RED = "\x1b[31m"
-GREEN = "\x1b[32m"
-BOLD = "\x1b[1m"
-CODE = "\x1b[100m\x1b[30m"
-RESET = "\x1b[0m"
+const RED = "\x1b[31m"
+const GREEN = "\x1b[32m"
+const BOLD = "\x1b[1m"
+const CODE = "\x1b[100m\x1b[30m"
+const RESET = "\x1b[0m"
 
 # Messages
-BUILD_FAILURE = "
+const BUILD_FAILURE = "
 Note -> If you or any other program didn't edit the source code which might've
 caused this build failure, we would greatly appreciate if you made a bug report.
 "
@@ -19,8 +21,8 @@ function build()
         else
             try
                 run(`cargo run --release`)
-            catch
-                println("\n$(RED)Build failed.$RESET")
+            catch e
+                println("$(RED)Build failed -> $(e).$RESET")
                 println(BUILD_FAILURE)
                 exit(1)
             end
@@ -29,8 +31,8 @@ function build()
 
     try
         run(`cargo run`)
-    catch
-        println("\n$(RED)Build failed.$RESET")
+    catch e
+        println("$(RED)Build failed -> $(e).$RESET")
         println(BUILD_FAILURE)
         exit(1)
     end
@@ -39,8 +41,8 @@ end
 function test()
     try
         run(`cargo test`)
-    catch
-        println("\n$(RED)Tests failed.$RESET")
+    catch e
+        println("$(RED)Build failed -> $(e).$RESET")
         println(BUILD_FAILURE)
         exit(1)
     end
@@ -49,8 +51,8 @@ end
 function fmt()
     try
         run(`cargo fmt`)
-    catch
-        println("\n$(RED)Formatting failed.$RESET")
+    catch e
+        println("$(RED)Build failed -> $(e).$RESET")
         println(BUILD_FAILURE)
         exit(1)
     end
@@ -75,14 +77,17 @@ function classbasket()
                 run(`javac ./class_basket/$file`)
                 print(".")
             end
+            println(" Done! ✨\n")
         end
-    catch
-        println("\n$(RED)Build failed.$RESET")
+        println("Building invalid classfiles")
+        intentionally_invalid()
+    catch e
+        println("$(RED)Build failed -> $e.$RESET")
         println(BUILD_FAILURE)
         exit(1)
     end
 
-    println(" Done! $RESET\n")
+    println("$RESET")
 end
 
 if length(ARGS) == 0
@@ -121,8 +126,7 @@ else
     elseif command == "fmt"
         fmt()
     else
-        println("
-$(RED)Unknown command$RESET -> $command. Please run bubble without any arguments
+        println("$(RED)Unknown command$RESET -> $command. Please run bubble without any arguments
 for help regarding its usage.
 ")
     end
