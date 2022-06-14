@@ -27,6 +27,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "aftermath_class_loader"
+version = "0.0.0"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
