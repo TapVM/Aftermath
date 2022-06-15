@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "aftermath_cfparser",
-    "aftermath_class_loader",
+    "aftermath_class_loader"
 ]
