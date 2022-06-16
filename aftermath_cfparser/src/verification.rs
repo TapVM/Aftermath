@@ -128,7 +128,7 @@ impl<'a> Verifier<'a> {
         Ok(self.class)
     }
 
-    fn verify_class_attributes(&self) -> Result<(), ParsingError<'a>> {
+    pub fn verify_class_attributes(&self) -> Result<(), ParsingError<'a>> {
         let class_attributes = &self.class.attributes;
         let cp = &self.class.cp;
 
@@ -143,24 +143,24 @@ impl<'a> Verifier<'a> {
                         ));
                     }
                 }
-                Attributes::InnerClass(z) => {}
-                Attributes::EnclosingMethod(z) => {}
-                Attributes::SourceDebugExt(z) => {}
-                Attributes::BootstrapMethods(z) => {}
-                Attributes::Module(z) => {}
-                Attributes::ModulePackages(z) => {}
-                Attributes::ModuleMainClass(z) => {}
-                Attributes::NestHost(z) => {}
-                Attributes::NestMembers(z) => {}
-                Attributes::Record(z) => {}
-                Attributes::PermittedSubclasses(z) => {}
-                Attributes::Synthetic(z) => {}
-                Attributes::Deprecated(z) => {}
-                Attributes::Signature(z) => {}
-                Attributes::RuntimeVisibleAnnotations(z) => {}
-                Attributes::RuntimeInvisibleAnnotations(z) => {}
-                Attributes::RuntimeVisibleTypeAnnotations(z) => {}
-                Attributes::RuntimeInvisibleTypeAnnotations(z) => {}
+                Attributes::InnerClass(_z) => {}
+                Attributes::EnclosingMethod(_z) => {}
+                Attributes::SourceDebugExt(_z) => {}
+                Attributes::BootstrapMethods(_z) => {}
+                Attributes::Module(_z) => {}
+                Attributes::ModulePackages(_z) => {}
+                Attributes::ModuleMainClass(_z) => {}
+                Attributes::NestHost(_z) => {}
+                Attributes::NestMembers(_z) => {}
+                Attributes::Record(_z) => {}
+                Attributes::PermittedSubclasses(_z) => {}
+                Attributes::Synthetic(_z) => {}
+                Attributes::Deprecated(_z) => {}
+                Attributes::Signature(_z) => {}
+                Attributes::RuntimeVisibleAnnotations(_z) => {}
+                Attributes::RuntimeInvisibleAnnotations(_z) => {}
+                Attributes::RuntimeVisibleTypeAnnotations(_z) => {}
+                Attributes::RuntimeInvisibleTypeAnnotations(_z) => {}
                 _ => unreachable!(),
             }
         }
@@ -168,7 +168,7 @@ impl<'a> Verifier<'a> {
         Ok(())
     }
 
-    fn verify_attributes(&self) -> Result<(), ParsingError<'a>> {
+    pub fn verify_attributes(&self) -> Result<(), ParsingError<'a>> {
         for z in &self.class.attributes {
             if !matches!(
                 z,
@@ -276,8 +276,11 @@ impl<'a> Verifier<'a> {
         Ok(())
     }
 
-    fn verify_attributes_internal(&self, attribute: Attributes) -> Result<(), ParsingError<'a>> {
-        let cp = &self.class.cp;
+    pub fn verify_attributes_internal(
+        &self,
+        _attribute: Attributes,
+    ) -> Result<(), ParsingError<'a>> {
+        let _cp = &self.class.cp;
         Ok(())
 
         // match attribute {
