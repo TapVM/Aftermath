@@ -78,8 +78,8 @@ function classbasket()
             run(`javac ./class_basket/$file`)
             print(".")
         end
-        println(" Done! ✨\n")
-        println("Building invalid classfiles")
+        println(" Done! $(RESET)✨\n")
+        println("Building $(RED)invalid$RESET classfiles...")
         intentionally_invalid()
     catch e
         println("$(RED)Build failed -> $e.$RESET")

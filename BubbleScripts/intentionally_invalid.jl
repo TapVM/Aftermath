@@ -5,5 +5,5 @@ function intentionally_invalid()
     bytes[1:4] = zeros(4)
     write(path, bytes)
 
-    ScriptLog("made class with invalid magic (Should be 0xCAFEBABE, now contains zeros)")
+    ScriptLog("Made class with invalid magic. (Should be 0xCAFEBABE, now filled with zeros).")
 end
