@@ -1,3 +1,5 @@
+#!/usr/bin/env julia
+
 include("./BubbleScripts/namespace.jl")
 
 # ANSI Colors ✨
@@ -72,13 +74,11 @@ function classbasket()
     print("\n$(GREEN)Building classbasket")
 
     try
-        for (_, _, files) in walkdir("./class_basket/")
-            for file in Iterators.filter((z) -> endswith(z, ".java"), files)
-                run(`javac ./class_basket/$file`)
-                print(".")
-            end
-            println(" Done! ✨\n")
+        for file in filter((z) -> endswith(z, ".java"), readdir("./class_basket"))
+            run(`javac ./class_basket/$file`)
+            print(".")
         end
+        println(" Done! ✨\n")
         println("Building invalid classfiles")
         intentionally_invalid()
     catch e
