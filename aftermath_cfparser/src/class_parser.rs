@@ -746,7 +746,7 @@ impl<'class> Parser<'class> {
         unsafe {
             core::slice::from_raw_parts(
                 self.u1_range(length * 2).as_ptr().cast(),
-                length.try_into().unwrap(),
+                length.try_into().unwrap(), // This should be optimized away on 64 and 32 bit platforms since usize is >= U4
             )
         }
     }

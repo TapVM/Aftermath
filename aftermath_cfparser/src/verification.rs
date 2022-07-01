@@ -1,6 +1,7 @@
 use super::class_parser::{Attributes, ClassFile, CpNode, ParsingError};
 use super::errors::Attributes as ErrorAttributes;
 use super::errors::CpNodeError;
+use super::consts;
 
 pub struct Verifier<'a> {
     class: ClassFile<'a>,
@@ -34,7 +35,7 @@ impl<'a> Verifier<'a> {
         let major_v = class.major_v.to_u2();
         let minor_v = class.minor_v.to_u2();
 
-        if !(45..=61).contains(&major_v) {
+        if consts::MAJOR_VERSION_RANGE.contains(&major_v) {
             return Err(ParsingError::InvalidMajorV);
         }
 
@@ -46,6 +47,8 @@ impl<'a> Verifier<'a> {
             self.verify_cp_node(node)?;
         }
 
+        // Safety -> We have already verified the entirety of the constant pool, it is safe to use unreachable_unchecked here.
+        // TODO -> We should *really* make this less confusing | Urgency: Low.
         let this_class = if let CpNode::Utf8(z) =
             if let CpNode::Class(z) = &class.cp[class.this_class.to_u2() as usize - 1] {
                 &class.cp[z.name_index.to_u2() as usize - 1]
@@ -123,6 +126,8 @@ impl<'a> Verifier<'a> {
             if !(filtered.next().is_none() && has_module) {
                 return Err(ParsingError::InvalidAttributesAsModule);
             }
+
+
         }
 
         Ok(self.class)
@@ -273,6 +278,14 @@ impl<'a> Verifier<'a> {
         // -----------------------------------------------------------------------------------------
 
         self.verify_class_attributes()?;
+        Ok(())
+    }
+
+    pub fn verify_cp(&self) -> Result<(), ParsingError> {
+        for z in &self.class.cp {
+            self.verify_cp_node(z)?;
+        }
+
         Ok(())
     }
 
