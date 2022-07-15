@@ -14,3 +14,6 @@ perf.data.old
 
 # JetBrains IDEs
 .idea
+
+# Aftermath_libjimage_bind CMake Build cache.
+/aftermath_libjimage_bind/cmake-build-debug/

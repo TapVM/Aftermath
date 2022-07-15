@@ -53,6 +53,9 @@ end
 function fmt()
     try
         run(`cargo fmt`)
+        for i in readlines(`find . -wholename "./aftermath_libjimage_bind/*.h" -o -wholename "./aftermath_libjimage_bind/*.cpp" ! -wholename "./aftermath_libjimage_bind/cmake-build-debug/*"`)
+            run(`clang-format $i -i`)
+        end
     catch e
         println("$(RED)Build failed -> $(e).$RESET")
         println(BUILD_FAILURE)

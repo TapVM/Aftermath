@@ -1,15 +1,18 @@
 use super::class_parser::{Attributes, ClassFile, CpNode, ParsingError};
+use super::consts;
 use super::errors::Attributes as ErrorAttributes;
 use super::errors::CpNodeError;
-use super::consts;
 
-pub struct Verifier<'a> {
+pub struct Verifier<'a>
+{
     class: ClassFile<'a>,
     bootstrap_methods: Vec<usize>,
 }
 
-impl<'a> Verifier<'a> {
-    pub fn new(class: ClassFile<'a>) -> Self {
+impl<'a> Verifier<'a>
+{
+    pub fn new(class: ClassFile<'a>) -> Self
+    {
         let bootstrap_methods: Vec<_> = class
             .attributes
             .iter()
@@ -29,7 +32,8 @@ impl<'a> Verifier<'a> {
         }
     }
 
-    pub fn verify(self) -> Result<ClassFile<'a>, ParsingError<'a>> {
+    pub fn verify(self) -> Result<ClassFile<'a>, ParsingError<'a>>
+    {
         let class = &self.class;
 
         let major_v = class.major_v.to_u2();
@@ -126,14 +130,13 @@ impl<'a> Verifier<'a> {
             if !(filtered.next().is_none() && has_module) {
                 return Err(ParsingError::InvalidAttributesAsModule);
             }
-
-
         }
 
         Ok(self.class)
     }
 
-    pub fn verify_class_attributes(&self) -> Result<(), ParsingError<'a>> {
+    pub fn verify_class_attributes(&self) -> Result<(), ParsingError<'a>>
+    {
         let class_attributes = &self.class.attributes;
         let cp = &self.class.cp;
 
@@ -173,7 +176,8 @@ impl<'a> Verifier<'a> {
         Ok(())
     }
 
-    pub fn verify_attributes(&self) -> Result<(), ParsingError<'a>> {
+    pub fn verify_attributes(&self) -> Result<(), ParsingError<'a>>
+    {
         for z in &self.class.attributes {
             if !matches!(
                 z,
@@ -281,7 +285,8 @@ impl<'a> Verifier<'a> {
         Ok(())
     }
 
-    pub fn verify_cp(&self) -> Result<(), ParsingError> {
+    pub fn verify_cp(&self) -> Result<(), ParsingError>
+    {
         for z in &self.class.cp {
             self.verify_cp_node(z)?;
         }
@@ -289,10 +294,9 @@ impl<'a> Verifier<'a> {
         Ok(())
     }
 
-    pub fn verify_attributes_internal(
-        &self,
-        _attribute: Attributes,
-    ) -> Result<(), ParsingError<'a>> {
+    pub fn verify_attributes_internal(&self, _attribute: Attributes)
+        -> Result<(), ParsingError<'a>>
+    {
         let _cp = &self.class.cp;
         Ok(())
 
@@ -473,7 +477,8 @@ impl<'a> Verifier<'a> {
         // Ok(())
     }
 
-    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>> {
+    fn verify_cp_node(&self, node: &CpNode) -> Result<(), ParsingError<'a>>
+    {
         let cp = &self.class.cp;
         let bootstrap_methods = &self.bootstrap_methods;
 

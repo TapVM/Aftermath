@@ -2,7 +2,8 @@ use std::ops::RangeInclusive;
 pub const MAGIC: u32 = 0xCAFEBABE;
 pub const MAJOR_VERSION_RANGE: RangeInclusive<u16> = 45..=61;
 
-pub mod class_acc_flags {
+pub mod class_acc_flags
+{
     pub const PUBLIC: u16 = 0x0001;
     pub const FINAL: u16 = 0x0010;
     pub const SUPER: u16 = 0x0020;
