@@ -2,22 +2,22 @@
 #include "../include/jimage.hpp"
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <vector>
+
+static std::map<std::string, std::vector<char>> classes = {};
 
 bool ctw_visitor(JImageFile *jimage, const char *module_name,
                  const char *version, const char *package, const char *name,
                  const char *extension, void *arg)
 {
-  static std::vector<std::vector<char>> classes = {};
-
   if (strcmp(extension, "class") == 0) {
     jlong size;
     auto location =
         JIMAGE_FindResource(jimage, module_name, version, name, &size);
     auto buffer = std::vector<char>();
     JIMAGE_GetResource(jimage, location, buffer.data(), size);
-    std::cout << "Pushing " << package << " to the buffer!" << std::endl;
-    classes.push_back(buffer);
+    classes.insert(std::string(package), buffer);
   }
 
   return true;
