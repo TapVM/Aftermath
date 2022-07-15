@@ -1,0 +1,3 @@
+[submodule "aftermath_libjimage_bind/libfmt"]
+	path = aftermath_libjimage_bind/libfmt
+	url = https://github.com/fmtlib/fmt.git

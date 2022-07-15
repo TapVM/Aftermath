@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
 
-PROJECT(aftermath_libjimage_bind)
-INCLUDE_DIRECTORIES($ENV{JAVA_HOME}/include/ include/)
-
 IF (NOT DEFINED ENV{JAVA_HOME})
     message(FATAL_ERROR "JAVA_HOME does not exist, please set it. Exiting.")
 endif()
+
+PROJECT(aftermath_libjimage_bind)
+INCLUDE_DIRECTORIES($ENV{JAVA_HOME}/include/ include/ libfmt/include/)
 
 IF (APPLE)
     message("Detected MacOS, adding JAVA_HOME/include/darwin/ to include path.")
@@ -26,6 +26,8 @@ else()
     LINK_LIBRARIES($ENV{JAVA_HOME}/lib/libjimage.so)
 endif()
 
+add_subdirectory(libfmt EXCLUDE_FROM_ALL)
+
 ADD_LIBRARY(aftermath_libjimage_bind
             STATIC
             ./src/aftermath_libjimage_bind.cpp
@@ -36,3 +38,5 @@ ADD_EXECUTABLE(aftermath_libjimage_bind_executable
             ./src/aftermath_libjimage_bind.cpp
             include/aftermath_libjimage_bind.h
             include/jimage.hpp)
+
+target_link_libraries(aftermath_libjimage_bind_executable PUBLIC fmt)
