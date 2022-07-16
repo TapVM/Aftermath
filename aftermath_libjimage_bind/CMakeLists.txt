@@ -7,6 +7,9 @@ endif()
 PROJECT(aftermath_libjimage_bind)
 INCLUDE_DIRECTORIES($ENV{JAVA_HOME}/include/ include/ libfmt/include/)
 
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter")
+message(${CMAKE_CXX_COMPILER_ID})
+
 IF (APPLE)
     message("Detected MacOS, adding JAVA_HOME/include/darwin/ to include path.")
     INCLUDE_DIRECTORIES($ENV{JAVA_HOME}/include/darwin/)
