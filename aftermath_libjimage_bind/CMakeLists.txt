@@ -8,7 +8,7 @@ PROJECT(aftermath_libjimage_bind)
 INCLUDE_DIRECTORIES($ENV{JAVA_HOME}/include/ include/ libfmt/include/)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter")
-message(${CMAKE_CXX_COMPILER_ID})
+set(CMAKE_CXX_STANDARD 20)
 
 IF (APPLE)
     message("Detected MacOS, adding JAVA_HOME/include/darwin/ to include path.")
@@ -21,21 +21,17 @@ else()
     INCLUDE_DIRECTORIES($ENV{JAVA_HOME}/include/linux/)
 endif()
 
-IF (WIN32)
-    message("Detected Windows, linking to libjimage.dll")
-    LINK_LIBRARIES($ENV{JAVA_HOME}/lib/libjimage.dll)
-else()
-    message("Detected non-Windows, linking to libjimage.so")
-    LINK_LIBRARIES($ENV{JAVA_HOME}/lib/libjimage.so)
-endif()
-
 add_subdirectory(libfmt EXCLUDE_FROM_ALL)
 
 ADD_LIBRARY(aftermath_libjimage_bind
             STATIC
+            # C++ files.
             ./src/aftermath_libjimage_bind.cpp
-            include/aftermath_libjimage_bind.h
-            include/jimage.hpp)
+            ./src/endian.cpp
+            ./src/imageDecompressor.cpp
+            ./src/imageFile.cpp
+            ./src/jimage.cpp
+            ./src/NativeImageBuffer.cpp)
 
 ADD_EXECUTABLE(aftermath_libjimage_bind_executable
             ./src/aftermath_libjimage_bind.cpp
