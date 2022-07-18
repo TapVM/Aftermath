@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
+use std::str::Utf8Error;
+
 use thiserror::Error;
 
 #[derive(Debug)]
-pub enum CpNodeError
-{
+pub enum CpNodeError {
     Class,
     String,
     MethodType,
@@ -26,8 +27,7 @@ pub enum CpNodeError
 }
 
 #[derive(Debug)]
-pub enum Attributes
-{
+pub enum Attributes {
     Value,
     Code,
     StackMapTable,
@@ -61,8 +61,7 @@ pub enum Attributes
 }
 
 #[derive(Error, Debug)]
-pub enum ParsingError<'a>
-{
+pub enum ParsingError<'a> {
     // Parsing errors.
     #[error(
         "Malformed class -> The magic of the class file should only be 0xCAFEBABE! ☕ 💃 ✨
@@ -200,4 +199,12 @@ pub enum ParsingError<'a>
     InvalidCodeAttributes,
     #[error("TODO")]
     InvalidRecordComponentInfoAttributes,
+    #[error("Out of bounds")]
+    OutOfBounds,
+    #[error("InvalidConstantPoolLength -> Length can't be 0")]
+    InvalidConstantPoolLength,
+    #[error("InvalidTag -> Tag can't be 0")]
+    InvalidTag,
+    #[error("Utf8Error -> ")]
+    Utf8Error(#[from] Utf8Error),
 }
