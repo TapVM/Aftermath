@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::consts;
+
 use super::errors;
 pub use errors::Attributes as ErrorAttributes;
 pub use errors::ParsingError;
@@ -1315,7 +1317,6 @@ impl<'class> Parser<'class> {
 
                         let uses_count = self.u2()?;
                         let uses_index = self.u2_range(uses_count.to_u2().into())?;
-
                         let provides_count = self.u2()?;
                         let mut provides = Vec::with_capacity(provides_count.to_u2().into());
 
@@ -1759,29 +1760,24 @@ impl<'class> Parser<'class> {
 
     pub fn parse(&mut self) -> Result<ClassFile<'class>, ParsingError<'class>> {
         let magic = self.u4()?;
-        if magic != 0xCAFEBABE {
+
+        if magic != /* 0xCAFEBABE */ consts::MAGIC {
             return Err(ParsingError::Magic);
         }
 
         let minor_v = self.u2()?;
         let major_v = self.u2()?;
-
         let cp_count = self.u2()?;
         let cp = self.cp(cp_count.to_u2())?;
-
         let access_flags = self.u2()?;
         let this_class = self.u2()?;
         let super_class = self.u2()?;
-
         let interfaces_count = self.u2()?;
         let interfaces = self.u2_range(interfaces_count.to_u2() as u32)?;
-
         let fields_count = self.u2()?;
         let fields = self.fields(fields_count.to_u2(), &cp)?;
-
         let methods_count = self.u2()?;
         let methods = self.methods(methods_count.to_u2(), &cp)?;
-
         let attributes_count = self.u2()?;
         let attributes = self.attributes(attributes_count.to_u2(), &cp)?;
 
