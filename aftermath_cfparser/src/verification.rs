@@ -1,3 +1,6 @@
+// This file is just random old garbage, ignore it. Currently not used. Will be
+// rewritten soon.
+
 use super::class_parser::{Attributes, ClassFile, CpNode, ParsingError};
 use super::consts;
 use super::errors::Attributes as ErrorAttributes;

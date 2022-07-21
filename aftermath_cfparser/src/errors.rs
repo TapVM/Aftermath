@@ -1,7 +1,15 @@
-#![allow(dead_code)]
+//------ aftermath_cfparser -- Classfile parser for the Aftermath JVM. -------//
+//
+// Part of the Aftermath JVM, under the MIT license. The LICENSE file is present
+// at the project root, please consult to it for license information.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains error types for aftermath_cfparser
+//
+//===----------------------------------------------------------------------===//
 
 use std::str::Utf8Error;
-
 use thiserror::Error;
 
 #[derive(Debug)]

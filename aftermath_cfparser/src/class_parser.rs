@@ -1,4 +1,14 @@
-#![allow(dead_code)]
+//------ aftermath_cfparser -- Classfile parser for the Aftermath JVM. -------//
+//
+// Part of the Aftermath JVM, under the MIT license. The LICENSE file is present
+// at the project root, please consult to it for license information.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains the parser for the class file format. It is based on the
+// JVM 17 specification.
+//
+//===----------------------------------------------------------------------===//
 
 use crate::consts;
 
@@ -764,10 +774,6 @@ impl<'class> Parser<'class> {
                 length.try_into().unwrap(), // This should be optimized away on 64 and 32 bit platforms since usize is >= U4
             )
         })
-    }
-
-    fn to_u2(&self, data: U2) -> u16 {
-        u16::from_be_bytes(data.0)
     }
 
     fn u4(&mut self) -> Result<U4, ParsingError<'class>> {

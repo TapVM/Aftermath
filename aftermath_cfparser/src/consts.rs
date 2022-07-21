@@ -1,3 +1,14 @@
+//------ aftermath_cfparser -- Classfile parser for the Aftermath JVM. -------//
+//
+// Part of the Aftermath JVM, under the MIT license. The LICENSE file is present
+// at the project root, please consult to it for license information.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is a central space for constants in aftermath_cfparser.
+//
+//===----------------------------------------------------------------------===//
+
 use std::ops::RangeInclusive;
 pub const MAGIC: u32 = 0xCAFEBABE;
 pub const MAJOR_VERSION_RANGE: RangeInclusive<u16> = 45..=61;
