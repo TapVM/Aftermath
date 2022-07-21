@@ -43,10 +43,9 @@ pub fn issue_9_out_of_bound_indexing() {
 #[test]
 pub fn issue_10_integer_underflow_while_subtracting() {
     #[rustfmt::skip]
-    let mut parser = class_parser::Parser::new(&[
-        202, 254, 186, 190, 255, 255, 255, 1, 0, 0, 0, 39, 39, 39, 45, 216, 216,
-        216, 216, 216, 216, 216, 216, 255, 255,
-    ]);
+    let mut parser = class_parser::Parser::new(
+        &[202, 254, 186, 190, 255, 255, 255, 1, 0, 0]
+    );
 
     let _ = parser.parse();
 }
